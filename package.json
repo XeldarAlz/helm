@@ -1,0 +1,35 @@
+{
+  "name": "helm",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check": "svelte-check --tsconfig ./tsconfig.json",
+    "tauri": "tauri"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/XeldarAlz/helm.git"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^5.1.1",
+    "@tailwindcss/vite": "^4.2.1",
+    "@tauri-apps/cli": "^2.10.1",
+    "@tsconfig/svelte": "^5.0.8",
+    "svelte": "^5.53.12",
+    "svelte-check": "^4.4.5",
+    "tailwindcss": "^4.2.1",
+    "tslib": "^2.8.1",
+    "typescript": "^5.9.3",
+    "vite": "^6.4.1"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.10.1",
+    "lucide-svelte": "^0.577.0",
+    "motion": "^12.36.0",
+    "svelte-i18n": "^4.0.1"
+  }
+}

@@ -1,0 +1,143 @@
+{
+  "app": {
+    "name": "Helm",
+    "tagline": "Command your AI agents"
+  },
+  "splash": {
+    "loading": "Initializing...",
+    "ready": "Ready",
+    "checkingCli": "Checking Claude Code CLI...",
+    "detectingProject": "Detecting project...",
+    "loadingState": "Loading pipeline state...",
+    "loadingSettings": "Loading settings..."
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "chat": "Session",
+    "orchestration": "Orchestration",
+    "documents": "Documents",
+    "code": "Code",
+    "git": "Git Timeline",
+    "history": "Session History",
+    "settings": "Settings"
+  },
+  "dashboard": {
+    "welcome": "Welcome to Helm",
+    "subtitle": "What would you like to build today?",
+    "quickActions": {
+      "newGame": "New Game",
+      "newGameDesc": "Start from a game idea and build it end-to-end",
+      "resume": "Resume Build",
+      "resumeDesc": "Continue where you left off",
+      "status": "Check Status",
+      "statusDesc": "View current pipeline progress"
+    },
+    "pipeline": {
+      "idea": "Game Idea",
+      "architecture": "Architecture",
+      "planning": "Planning",
+      "building": "Building",
+      "complete": "Complete"
+    },
+    "assets": {
+      "scripts": "Scripts",
+      "tests": "Tests",
+      "prefabs": "Prefabs",
+      "configs": "Configs"
+    },
+    "recentSessions": "Recent Sessions",
+    "noSessions": "No sessions yet"
+  },
+  "chat": {
+    "inputPlaceholder": "Type your response...",
+    "send": "Send",
+    "newSession": "New Session",
+    "endSession": "End Session",
+    "clearContext": "Clear Context",
+    "contextMeter": {
+      "label": "Context",
+      "low": "Healthy",
+      "medium": "Getting full",
+      "high": "Consider new session"
+    },
+    "confirmEnd": "End current session and start new?",
+    "confirmClear": "This will clear Claude's memory of this conversation. Continue?",
+    "contextCleared": "Context cleared"
+  },
+  "orchestration": {
+    "title": "Orchestration Control",
+    "phase": "Phase {current} of {total}",
+    "agents": {
+      "idle": "Idle",
+      "running": "Running",
+      "reviewing": "Reviewing",
+      "passed": "Passed",
+      "failed": "Failed"
+    },
+    "controls": {
+      "pause": "Pause",
+      "resume": "Resume",
+      "stop": "Stop"
+    },
+    "tasks": {
+      "pending": "Pending",
+      "working": "Working",
+      "review": "Review",
+      "done": "Done"
+    },
+    "log": {
+      "title": "Live Log",
+      "filterAll": "All",
+      "filterAgents": "Agents",
+      "filterHooks": "Hooks",
+      "filterErrors": "Errors"
+    }
+  },
+  "documents": {
+    "title": "Documents",
+    "notCreated": "Not yet created",
+    "search": "Search in document..."
+  },
+  "code": {
+    "title": "Code Browser",
+    "noTests": "No tests found",
+    "hasTests": "Tests available"
+  },
+  "git": {
+    "title": "Git Timeline",
+    "noCommits": "No commits yet",
+    "filesChanged": "{count} files changed"
+  },
+  "history": {
+    "title": "Session History",
+    "search": "Search sessions...",
+    "noHistory": "No past sessions"
+  },
+  "settings": {
+    "title": "Settings",
+    "project": "Project",
+    "projectDir": "Project Directory",
+    "cliPath": "Claude Code CLI Path",
+    "models": "Models",
+    "parallelism": "Parallelism",
+    "maxAgents": "Max Concurrent Agents",
+    "hooks": "Hooks",
+    "appearance": "Appearance",
+    "fontSize": "Font Size",
+    "language": "Language",
+    "keyboard": "Keyboard Shortcuts",
+    "about": "About"
+  },
+  "common": {
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "close": "Close",
+    "save": "Save",
+    "delete": "Delete",
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "retry": "Retry",
+    "yes": "Yes",
+    "no": "No"
+  }
+}
