@@ -49,6 +49,17 @@ pub enum PipelinePhase {
     Custom,
 }
 
+/// Lightweight summary returned by list_sessions.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SessionSummary {
+    pub id: SessionId,
+    pub phase: PipelinePhase,
+    pub status: SessionStatus,
+    pub started_at: DateTime<Utc>,
+    pub ended_at: Option<DateTime<Utc>>,
+    pub message_count: u32,
+}
+
 impl std::fmt::Display for PipelinePhase {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
