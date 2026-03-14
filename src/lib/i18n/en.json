@@ -62,7 +62,26 @@
     },
     "confirmEnd": "End current session and start new?",
     "confirmClear": "This will clear Claude's memory of this conversation. Continue?",
-    "contextCleared": "Context cleared"
+    "contextCleared": "Context cleared",
+    "typing": "Claude is thinking...",
+    "agentTyping": "Waiting for Claude...",
+    "noSession": "No active session",
+    "noSessionDesc": "Start a new session from the Dashboard or use the button below.",
+    "startSession": "Start Session",
+    "sessionEnded": "Session ended",
+    "sessionEndedDesc": "This session has finished. Start a new session to continue.",
+    "selectPhase": "Select Phase",
+    "phases": {
+      "game_idea": "Game Idea Workshop",
+      "architect": "Architecture Studio",
+      "plan_workflow": "Workflow Planning",
+      "orchestrate": "Orchestration",
+      "custom": "Custom Session"
+    },
+    "emptyChat": "Session started. Waiting for response...",
+    "contextWarning": "Context getting full. Consider starting a new session.",
+    "sessionCrashed": "Session crashed",
+    "sessionCrashedDesc": "The Claude CLI process exited unexpectedly. You can restart the session to continue."
   },
   "orchestration": {
     "title": "Orchestration Control",
@@ -83,50 +102,156 @@
       "pending": "Pending",
       "working": "Working",
       "review": "Review",
-      "done": "Done"
+      "done": "Done",
+      "failed": "Failed"
+    },
+    "hooks": {
+      "title": "Hooks",
+      "passed": "Passed",
+      "warning": "Warning",
+      "failed": "Failed",
+      "running": "Running",
+      "noData": "No hook data"
     },
     "log": {
       "title": "Live Log",
       "filterAll": "All",
       "filterAgents": "Agents",
       "filterHooks": "Hooks",
-      "filterErrors": "Errors"
+      "filterErrors": "Errors",
+      "noEntries": "No log entries",
+      "jumpToLatest": "Jump to latest"
+    },
+    "empty": {
+      "title": "Orchestration Monitor",
+      "description": "Start an orchestration session from the Dashboard to monitor multi-agent execution in real time."
     }
   },
   "documents": {
     "title": "Documents",
     "notCreated": "Not yet created",
-    "search": "Search in document..."
+    "search": "Search in document...",
+    "noContent": "This document hasn't been created yet. Run the corresponding pipeline phase to generate it.",
+    "sections": "Sections",
+    "noSections": "No sections",
+    "scrollToTop": "Back to top",
+    "searchResults": "{count} matches found",
+    "noResults": "No matches found",
+    "tabs": {
+      "GDD": "Game Design",
+      "TDD": "Architecture",
+      "WORKFLOW": "Workflow",
+      "PROGRESS": "Progress",
+      "ACTIVITY_LOG": "Activity Log"
+    },
+    "watching": "Live",
+    "updated": "Document updated"
   },
   "code": {
     "title": "Code Browser",
     "noTests": "No tests found",
-    "hasTests": "Tests available"
+    "hasTests": "Tests available",
+    "noFile": "Select a file from the tree to view its contents",
+    "emptyTree": "No project files found. Set your project directory in Settings.",
+    "lines": "{count} lines",
+    "copyPath": "Copy path",
+    "copied": "Copied!",
+    "fileSize": "Size",
+    "searchFiles": "Search files..."
   },
   "git": {
     "title": "Git Timeline",
     "noCommits": "No commits yet",
-    "filesChanged": "{count} files changed"
+    "filesChanged": "{count} files changed",
+    "loading": "Loading git history...",
+    "refresh": "Refresh",
+    "branches": "Branches",
+    "currentBranch": "Current branch",
+    "commits": "Commits",
+    "noRepo": "No git repository found",
+    "noRepoDesc": "Set your project directory to a git repository to view commit history.",
+    "status": "Status",
+    "ahead": "{count} ahead",
+    "behind": "{count} behind",
+    "staged": "Staged",
+    "unstaged": "Modified",
+    "untracked": "Untracked",
+    "added": "Added",
+    "modified": "Modified",
+    "deleted": "Deleted",
+    "insertions": "+{count}",
+    "deletions": "-{count}",
+    "viewDiff": "View changes",
+    "files": "Files"
   },
   "history": {
     "title": "Session History",
     "search": "Search sessions...",
-    "noHistory": "No past sessions"
+    "noHistory": "No past sessions",
+    "noHistoryDesc": "Sessions you create will appear here. Start a new session from the Dashboard.",
+    "viewTranscript": "View transcript",
+    "resumeSession": "Resume",
+    "messages": "{count} messages",
+    "duration": "Duration",
+    "phase": "Phase",
+    "allPhases": "All Phases",
+    "allStatuses": "All Statuses",
+    "active": "Active",
+    "ended": "Ended",
+    "error": "Error",
+    "sortNewest": "Newest first",
+    "sortOldest": "Oldest first"
   },
   "settings": {
     "title": "Settings",
+    "saved": "Settings saved",
     "project": "Project",
     "projectDir": "Project Directory",
+    "projectDirDesc": "Path to your Unity project root",
     "cliPath": "Claude Code CLI Path",
-    "models": "Models",
+    "cliPathDesc": "Path to the claude executable",
+    "models": "Agent Models",
+    "modelsDesc": "Choose which Claude model each agent type uses",
     "parallelism": "Parallelism",
     "maxAgents": "Max Concurrent Agents",
+    "maxAgentsDesc": "How many agents can run at the same time",
     "hooks": "Hooks",
+    "hooksDesc": "Automated code quality checks that run on every file write",
     "appearance": "Appearance",
     "fontSize": "Font Size",
+    "fontSizeDesc": "Base font size for the UI",
+    "reducedMotion": "Reduced Motion",
+    "reducedMotionDesc": "Disable animations for accessibility",
     "language": "Language",
     "keyboard": "Keyboard Shortcuts",
-    "about": "About"
+    "keyboardDesc": "Global shortcuts for quick navigation",
+    "about": "About",
+    "aboutDesc": "Helm — A beautiful GUI bridge for Claude Code CLI",
+    "version": "Version",
+    "modelOptions": {
+      "opus": "Claude Opus (Most capable)",
+      "sonnet": "Claude Sonnet (Balanced)",
+      "haiku": "Claude Haiku (Fastest)"
+    },
+    "agentLabels": {
+      "coder": "Coder",
+      "tester": "Tester",
+      "reviewer": "Reviewer",
+      "unitySetup": "Unity Setup",
+      "committer": "Committer"
+    },
+    "shortcuts": {
+      "newSession": "New Session",
+      "closeSession": "Close Session",
+      "openSettings": "Settings",
+      "dashboard": "Dashboard",
+      "search": "Search",
+      "toggleSidebar": "Toggle Sidebar"
+    }
+  },
+  "network": {
+    "offline": "You are offline. Claude Code requires an internet connection.",
+    "reconnected": "Back online"
   },
   "common": {
     "confirm": "Confirm",
@@ -138,6 +263,7 @@
     "error": "Something went wrong",
     "retry": "Retry",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "reset": "Reset to defaults"
   }
 }
