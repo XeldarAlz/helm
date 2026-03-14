@@ -24,6 +24,7 @@
   import ErrorState from "$lib/components/common/ErrorState.svelte";
   import {
     MessageSquare,
+    Rocket,
     Gamepad2,
     Compass,
     CalendarClock,
@@ -41,6 +42,7 @@
 
   // Phase display names
   const phaseNames: Record<string, string> = {
+    build_game: "chat.phases.build_game",
     game_idea: "chat.phases.game_idea",
     architect: "chat.phases.architect",
     plan_workflow: "chat.phases.plan_workflow",
@@ -213,6 +215,7 @@
 
   // Phase selection options for new session
   const phaseOptions = [
+    { id: "build_game", icon: Rocket, color: "var(--color-accent)" },
     { id: "game_idea", icon: Gamepad2, color: "var(--color-accent)" },
     { id: "architect", icon: Compass, color: "var(--color-agent-coder)" },
     { id: "plan_workflow", icon: CalendarClock, color: "var(--color-agent-tester)" },

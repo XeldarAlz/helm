@@ -161,11 +161,15 @@ impl ProcessManager {
 
         // ── Spawn and write message ──────────────────────────────────────────
 
+        eprintln!("[helm:manager] spawning: {} {:?}", executable, cmd.as_std().get_args().collect::<Vec<_>>());
+
         let mut child = cmd
             .spawn()
             .map_err(|e| format!("Failed to spawn '{}': {}", executable, e))?;
+        eprintln!("[helm:manager] spawned pid={:?}", child.id());
 
         // Write message to stdin, then close it so the CLI starts processing
+        eprintln!("[helm:manager] writing to stdin: {:?}", &message[..message.len().min(100)]);
         {
             let mut stdin = child.stdin.take().ok_or("Failed to capture stdin")?;
             stdin

@@ -212,15 +212,21 @@ pub fn spawn_json_reader(
         let mut lines = reader.lines();
 
         // Emit streaming indicator — the process is running
-        let _ = app.emit(
+        if let Err(e) = app.emit(
             "session:streaming",
             SessionStreamingPayload {
                 session_id,
                 streaming: true,
             },
-        );
+        ) {
+            eprintln!("[helm:json-reader] FAILED to emit streaming:true — {e}");
+        }
 
+        let mut line_count: u32 = 0;
+        let mut text_events: u32 = 0;
+        let mut result_text: Option<String> = None;
         while let Ok(Some(line)) = lines.next_line().await {
+            line_count += 1;
             if line.trim().is_empty() {
                 continue;
             }
@@ -230,45 +236,70 @@ pub fn spawn_json_reader(
                     StreamEvent::SessionInit {
                         session_id: sid, ..
                     } => {
+                        eprintln!("[helm:json-reader] init — claude session {sid}");
                         *claude_session_id.lock().await = Some(sid);
                     }
                     StreamEvent::TextDelta { text } => {
-                        let _ = app.emit(
+                        text_events += 1;
+                        if let Err(e) = app.emit(
                             "session:output",
                             SessionOutputPayload {
                                 session_id,
                                 text,
                             },
-                        );
+                        ) {
+                            eprintln!("[helm:json-reader] FAILED to emit output — {e}");
+                        }
                     }
                     StreamEvent::MessageStop => {
-                        // Message complete — no action needed, streaming indicator
-                        // will be cleared when the process exits (below).
+                        // Message complete — streaming indicator cleared on process exit.
                     }
                     StreamEvent::Result {
                         session_id: sid,
                         is_error,
                         error_text,
+                        result_text: res_text,
                     } => {
                         if let Some(sid) = sid {
                             *claude_session_id.lock().await = Some(sid);
                         }
                         if is_error {
+                            let err = error_text
+                                .unwrap_or_else(|| "Unknown error".to_string());
+                            eprintln!("[helm:json-reader] result error — {err}");
                             let _ = app.emit(
                                 "session:error",
                                 SessionErrorPayload {
                                     session_id,
-                                    error: error_text
-                                        .unwrap_or_else(|| "Unknown error".to_string()),
+                                    error: err,
                                 },
                             );
                         }
+                        result_text = res_text;
                     }
                 }
             }
         }
 
+        // If the process exited with zero text output but has a result message,
+        // surface it so the user isn't left staring at an empty screen.
+        if text_events == 0 {
+            if let Some(msg) = result_text {
+                eprintln!("[helm:json-reader] no text output — surfacing result: {msg}");
+                let _ = app.emit(
+                    "session:error",
+                    SessionErrorPayload {
+                        session_id,
+                        error: msg,
+                    },
+                );
+            }
+        }
+
         // Process exited — streaming is done
+        eprintln!(
+            "[helm:json-reader] done — {line_count} lines, {text_events} text deltas"
+        );
         let _ = app.emit(
             "session:streaming",
             SessionStreamingPayload {

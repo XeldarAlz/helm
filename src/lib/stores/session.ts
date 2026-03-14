@@ -44,6 +44,7 @@ let hadRecentError = false;
 /** Start listening for Tauri session events from the Rust backend. */
 export async function startSessionListeners(): Promise<void> {
   stopSessionListeners();
+  console.log("[helm:session] setting up event listeners");
 
   // Text output — accumulate token deltas into a single agent message.
   // With stream-json, each event is a token-level delta (not a full line),
@@ -53,6 +54,7 @@ export async function startSessionListeners(): Promise<void> {
       "session:output",
       (event) => {
         const { text } = event.payload;
+        console.log("[helm:session] output event:", text.slice(0, 80));
 
         if (!currentAgentMessageId) {
           const id = crypto.randomUUID();
@@ -120,6 +122,7 @@ export async function startSessionListeners(): Promise<void> {
     await listen<{ session_id: string; streaming: boolean }>(
       "session:streaming",
       (event) => {
+        console.log("[helm:session] streaming:", event.payload.streaming);
         isAgentTyping.set(event.payload.streaming);
 
         if (!event.payload.streaming) {
@@ -154,6 +157,7 @@ export async function startSessionListeners(): Promise<void> {
       "session:error",
       (event) => {
         const { error } = event.payload;
+        console.warn("[helm:session] error event:", error);
         hadRecentError = true;
         messages.update((msgs) => [
           ...msgs,

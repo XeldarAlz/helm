@@ -48,16 +48,20 @@ pub async fn create_session(
         mgr.set_cli_path(&cli_path);
         mgr.register_session(id, working_dir)?;
 
-        // 4. Auto-send the phase slash command (if applicable)
-        let command = match &phase {
-            PipelinePhase::GameIdea => Some("/game-idea"),
-            PipelinePhase::Architect => Some("/architect"),
-            PipelinePhase::PlanWorkflow => Some("/plan-workflow"),
-            PipelinePhase::Orchestrate => Some("/orchestrate"),
+        // 4. Auto-send the phase prompt (if applicable).
+        //    We embed the command markdown directly instead of using slash
+        //    commands, because the CLI working directory may not contain
+        //    the .claude/commands/ files (e.g. when pointed at a Unity project).
+        let prompt = match &phase {
+            PipelinePhase::BuildGame => Some(include_str!("../../../.claude/commands/build-game.md")),
+            PipelinePhase::GameIdea => Some(include_str!("../../../.claude/commands/game-idea.md")),
+            PipelinePhase::Architect => Some(include_str!("../../../.claude/commands/architect.md")),
+            PipelinePhase::PlanWorkflow => Some(include_str!("../../../.claude/commands/plan-workflow.md")),
+            PipelinePhase::Orchestrate => Some(include_str!("../../../.claude/commands/orchestrate.md")),
             PipelinePhase::Custom => None,
         };
-        if let Some(cmd) = command {
-            mgr.send(&id, cmd, app).await?;
+        if let Some(content) = prompt {
+            mgr.send(&id, content, app).await?;
         }
     }
 
