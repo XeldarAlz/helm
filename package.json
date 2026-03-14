@@ -8,6 +8,9 @@
     "build": "vite build",
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "build:macos": "bash scripts/build-macos.sh",
     "tauri": "tauri"
   },
   "repository": {
@@ -19,16 +22,19 @@
     "@tailwindcss/vite": "^4.2.1",
     "@tauri-apps/cli": "^2.10.1",
     "@tsconfig/svelte": "^5.0.8",
+    "jsdom": "^28.1.0",
     "svelte": "^5.53.12",
     "svelte-check": "^4.4.5",
     "tailwindcss": "^4.2.1",
     "tslib": "^2.8.1",
     "typescript": "^5.9.3",
-    "vite": "^6.4.1"
+    "vite": "^6.4.1",
+    "vitest": "^4.1.0"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.10.1",
     "lucide-svelte": "^0.577.0",
+    "marked": "^17.0.4",
     "motion": "^12.36.0",
     "svelte-i18n": "^4.0.1"
   }
