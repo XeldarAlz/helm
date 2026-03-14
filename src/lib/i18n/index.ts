@@ -1,4 +1,4 @@
-import { init, register, getLocaleFromNavigator, locale, t, _ } from "svelte-i18n";
+import { init, register, getLocaleFromNavigator, locale, t, _, waitLocale as _waitLocale } from "svelte-i18n";
 
 register("en", () => import("./en.json"));
 
@@ -9,4 +9,5 @@ export function initI18n() {
   });
 }
 
+export const waitLocale = _waitLocale;
 export { locale, t, _ };

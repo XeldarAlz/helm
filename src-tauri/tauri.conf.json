@@ -51,14 +51,7 @@
   },
   "plugins": {
     "shell": {
-      "open": true,
-      "scope": [
-        {
-          "name": "claude",
-          "cmd": "claude",
-          "args": true
-        }
-      ]
+      "open": true
     }
   }
 }
