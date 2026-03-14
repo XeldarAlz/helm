@@ -45,7 +45,9 @@ let hadRecentError = false;
 export async function startSessionListeners(): Promise<void> {
   stopSessionListeners();
 
-  // Text output — accumulate lines into a single agent message
+  // Text output — accumulate token deltas into a single agent message.
+  // With stream-json, each event is a token-level delta (not a full line),
+  // so we concatenate directly without adding newlines.
   unlisteners.push(
     await listen<{ session_id: string; text: string }>(
       "session:output",
@@ -68,7 +70,7 @@ export async function startSessionListeners(): Promise<void> {
           const msgId = currentAgentMessageId;
           messages.update((msgs) =>
             msgs.map((m) =>
-              m.id === msgId ? { ...m, content: m.content + "\n" + text } : m,
+              m.id === msgId ? { ...m, content: m.content + text } : m,
             ),
           );
         }
@@ -159,6 +161,44 @@ export async function startSessionListeners(): Promise<void> {
             id: crypto.randomUUID(),
             role: "system",
             content: `Error: ${error}`,
+            timestamp: new Date().toISOString(),
+          },
+        ]);
+      },
+    ),
+  );
+
+  // Tool use — show as system message so user sees what Claude is doing
+  unlisteners.push(
+    await listen<{ session_id: string; tool: string; input_summary: string }>(
+      "session:tool-use",
+      (event) => {
+        const { tool, input_summary } = event.payload;
+        messages.update((msgs) => [
+          ...msgs,
+          {
+            id: crypto.randomUUID(),
+            role: "system",
+            content: `Using ${tool}: ${input_summary}`,
+            timestamp: new Date().toISOString(),
+          },
+        ]);
+      },
+    ),
+  );
+
+  // Permission request — show as system message with warning
+  unlisteners.push(
+    await listen<{ session_id: string; tool: string; description: string }>(
+      "session:permission-request",
+      (event) => {
+        const { tool, description } = event.payload;
+        messages.update((msgs) => [
+          ...msgs,
+          {
+            id: crypto.randomUUID(),
+            role: "system",
+            content: `Permission requested: ${description}\nTo avoid prompts, configure --permission-mode in Settings or add --dangerously-skip-permissions to the CLI path.`,
             timestamp: new Date().toISOString(),
           },
         ]);

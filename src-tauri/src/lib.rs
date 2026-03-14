@@ -15,7 +15,7 @@ use watcher::docs::DocsWatcher;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let app = tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .manage(AppState::new())
@@ -52,6 +52,18 @@ pub fn run() {
             commands::git::get_git_status,
             commands::git::get_git_diff,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running Helm");
+        .build(tauri::generate_context!())
+        .expect("error while building Helm");
+
+    app.run(|app_handle, event| {
+        if let tauri::RunEvent::Exit = event {
+            // Send SIGTERM to all child processes so Claude Code can clean up
+            // gracefully.  We use try_lock because the async runtime may
+            // already be winding down.
+            let state = app_handle.state::<ProcessMgr>();
+            if let Ok(mut guard) = state.try_lock() {
+                guard.kill_all_sync();
+            };
+        }
+    });
 }

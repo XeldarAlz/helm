@@ -41,11 +41,12 @@ pub async fn create_session(
         (dir, settings.claude_cli_path.clone())
     };
 
-    // 3. Spawn the claude process
+    // 3. Register the session (no process spawned yet — each message
+    //    spawns its own short-lived `claude --print` process)
     {
         let mut mgr = process_mgr.lock().await;
         mgr.set_cli_path(&cli_path);
-        mgr.spawn(id, working_dir, app).await?;
+        mgr.register_session(id, working_dir)?;
 
         // 4. Auto-send the phase slash command (if applicable)
         let command = match &phase {
@@ -56,7 +57,7 @@ pub async fn create_session(
             PipelinePhase::Custom => None,
         };
         if let Some(cmd) = command {
-            mgr.send(&id, cmd).await?;
+            mgr.send(&id, cmd, app).await?;
         }
     }
 
@@ -67,6 +68,7 @@ pub async fn create_session(
 pub async fn send_message(
     state: State<'_, AppState>,
     process_mgr: State<'_, ProcessMgr>,
+    app: tauri::AppHandle,
     session_id: SessionId,
     message: String,
 ) -> Result<(), String> {
@@ -85,9 +87,9 @@ pub async fn send_message(
         });
     }
 
-    // Write to the child process stdin
+    // Spawn a new claude --print process for this message
     let mut mgr = process_mgr.lock().await;
-    mgr.send(&session_id, &message).await
+    mgr.send(&session_id, &message, app).await
 }
 
 #[tauri::command]
