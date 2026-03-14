@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0D1117;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#161B22;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#58D5E0;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#7CE3EC;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+  <!-- Helm wheel / ship's wheel -->
+  <circle cx="256" cy="256" r="120" fill="none" stroke="url(#accent)" stroke-width="16"/>
+  <circle cx="256" cy="256" r="40" fill="url(#accent)"/>
+  <!-- Spokes -->
+  <line x1="256" y1="136" x2="256" y2="96" stroke="url(#accent)" stroke-width="16" stroke-linecap="round"/>
+  <line x1="256" y1="376" x2="256" y2="416" stroke="url(#accent)" stroke-width="16" stroke-linecap="round"/>
+  <line x1="136" y1="256" x2="96" y2="256" stroke="url(#accent)" stroke-width="16" stroke-linecap="round"/>
+  <line x1="376" y1="256" x2="416" y2="256" stroke="url(#accent)" stroke-width="16" stroke-linecap="round"/>
+  <line x1="171" y1="171" x2="143" y2="143" stroke="url(#accent)" stroke-width="16" stroke-linecap="round"/>
+  <line x1="341" y1="341" x2="369" y2="369" stroke="url(#accent)" stroke-width="16" stroke-linecap="round"/>
+  <line x1="171" y1="341" x2="143" y2="369" stroke="url(#accent)" stroke-width="16" stroke-linecap="round"/>
+  <line x1="341" y1="171" x2="369" y2="143" stroke="url(#accent)" stroke-width="16" stroke-linecap="round"/>
+</svg>
