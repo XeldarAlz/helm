@@ -35,7 +35,19 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "category": "DeveloperTool",
+    "shortDescription": "AI-powered game development GUI",
+    "longDescription": "Helm is a desktop application that wraps Claude Code CLI in a polished GUI for AI-powered game development.",
+    "macOS": {
+      "minimumSystemVersion": "10.15",
+      "frameworks": [],
+      "dmg": {
+        "windowSize": { "width": 600, "height": 400 },
+        "appPosition": { "x": 180, "y": 190 },
+        "applicationFolderPosition": { "x": 420, "y": 190 }
+      }
+    }
   },
   "plugins": {
     "shell": {
