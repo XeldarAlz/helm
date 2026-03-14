@@ -124,7 +124,13 @@ pub async fn check_cli(state: State<'_, AppState>) -> Result<bool, String> {
         settings.claude_cli_path.clone()
     };
 
-    match tokio::process::Command::new(&cli_path)
+    let parts: Vec<&str> = cli_path.split_whitespace().collect();
+    let (executable, extra_args) = parts
+        .split_first()
+        .ok_or_else(|| "CLI path is empty".to_string())?;
+
+    match tokio::process::Command::new(executable)
+        .args(extra_args)
         .arg("--version")
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
