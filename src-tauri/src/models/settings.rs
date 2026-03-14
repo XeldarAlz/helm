@@ -8,6 +8,10 @@ pub struct AppSettings {
     pub agent_models: AgentModelConfig,
     pub font_size: u8,
     pub sidebar_collapsed: bool,
+    #[serde(default)]
+    pub theme: String,
+    #[serde(default)]
+    pub reduced_motion: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -28,6 +32,8 @@ impl Default for AppSettings {
             agent_models: AgentModelConfig::default(),
             font_size: 13,
             sidebar_collapsed: false,
+            theme: "dark".to_string(),
+            reduced_motion: false,
         }
     }
 }
