@@ -72,6 +72,7 @@
     "sessionEndedDesc": "This session has finished. Start a new session to continue.",
     "selectPhase": "Select Phase",
     "phases": {
+      "build_game": "Build Game",
       "game_idea": "Game Idea Workshop",
       "architect": "Architecture Studio",
       "plan_workflow": "Workflow Planning",

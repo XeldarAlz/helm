@@ -334,6 +334,8 @@ pub enum StreamEvent {
         session_id: Option<String>,
         is_error: bool,
         error_text: Option<String>,
+        /// The result text (present for both success and error results).
+        result_text: Option<String>,
     },
 }
 
@@ -373,10 +375,12 @@ pub fn parse_stream_json(line: &str) -> Option<StreamEvent> {
                 .get("is_error")
                 .and_then(|e| e.as_bool())
                 .unwrap_or(false);
+            let result_text = v
+                .get("result")
+                .and_then(|r| r.as_str())
+                .map(|s| s.to_string());
             let error_text = if is_error {
-                v.get("result")
-                    .and_then(|r| r.as_str())
-                    .map(|s| s.to_string())
+                result_text.clone()
             } else {
                 None
             };
@@ -384,6 +388,7 @@ pub fn parse_stream_json(line: &str) -> Option<StreamEvent> {
                 session_id,
                 is_error,
                 error_text,
+                result_text,
             })
         }
         _ => None,
@@ -431,10 +436,12 @@ mod stream_json_tests {
                 session_id,
                 is_error,
                 error_text,
+                result_text,
             }) => {
                 assert_eq!(session_id.as_deref(), Some("xyz-789"));
                 assert!(!is_error);
                 assert!(error_text.is_none());
+                assert_eq!(result_text.as_deref(), Some("pong"));
             }
             other => panic!("expected Result, got {:?}", other),
         }
@@ -448,10 +455,12 @@ mod stream_json_tests {
             Some(StreamEvent::Result {
                 is_error,
                 error_text,
+                result_text,
                 ..
             }) => {
                 assert!(is_error);
                 assert_eq!(error_text.as_deref(), Some("API key invalid"));
+                assert_eq!(result_text.as_deref(), Some("API key invalid"));
             }
             other => panic!("expected Result error, got {:?}", other),
         }

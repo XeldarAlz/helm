@@ -42,6 +42,7 @@ pub enum SessionStatus {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum PipelinePhase {
+    BuildGame,
     GameIdea,
     Architect,
     PlanWorkflow,
@@ -63,6 +64,7 @@ pub struct SessionSummary {
 impl std::fmt::Display for PipelinePhase {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            PipelinePhase::BuildGame => write!(f, "build-game"),
             PipelinePhase::GameIdea => write!(f, "game-idea"),
             PipelinePhase::Architect => write!(f, "architect"),
             PipelinePhase::PlanWorkflow => write!(f, "plan-workflow"),
