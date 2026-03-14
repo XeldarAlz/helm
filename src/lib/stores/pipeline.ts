@@ -8,6 +8,13 @@ export interface PipelineState {
   currentPhase: string;
 }
 
+export interface AssetCounts {
+  scripts: number;
+  tests: number;
+  prefabs: number;
+  configs: number;
+}
+
 export const pipelineState = writable<PipelineState>({
   gddExists: false,
   tddExists: false,

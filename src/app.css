@@ -142,6 +142,12 @@ html, body {
   50% { opacity: 0.6; }
 }
 
+/* Shimmer slide for active phase bar */
+@keyframes shimmer-slide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
 /* Reduced Motion */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

@@ -13,6 +13,8 @@ export interface AppSettings {
   };
   fontSize: number;
   sidebarCollapsed: boolean;
+  theme: string;
+  reducedMotion: boolean;
 }
 
 export const settings = writable<AppSettings>({
@@ -28,4 +30,6 @@ export const settings = writable<AppSettings>({
   },
   fontSize: 13,
   sidebarCollapsed: false,
+  theme: "dark",
+  reducedMotion: false,
 });
