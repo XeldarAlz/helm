@@ -67,17 +67,7 @@
   async function save() {
     saving = true;
     try {
-      // Map camelCase to snake_case for Rust
-      await updateSettings({
-        projectDir: local.projectDir,
-        claudeCliPath: local.claudeCliPath,
-        maxConcurrentAgents: local.maxConcurrentAgents,
-        agentModels: local.agentModels,
-        fontSize: local.fontSize,
-        sidebarCollapsed: local.sidebarCollapsed,
-        theme: local.theme,
-        reducedMotion: local.reducedMotion,
-      } as any);
+      await updateSettings({ ...local });
       settings.set({ ...local });
       dirty = false;
       addToast($_("settings.saved"), "success");
@@ -91,22 +81,21 @@
   onMount(async () => {
     try {
       const loaded = await getSettings();
-      // Normalize snake_case from Rust to camelCase
       local = {
-        projectDir: (loaded as any).project_dir ?? (loaded as any).projectDir ?? "",
-        claudeCliPath: (loaded as any).claude_cli_path ?? (loaded as any).claudeCliPath ?? "claude",
-        maxConcurrentAgents: (loaded as any).max_concurrent_agents ?? (loaded as any).maxConcurrentAgents ?? 3,
+        projectDir: loaded.projectDir ?? "",
+        claudeCliPath: loaded.claudeCliPath ?? "claude",
+        maxConcurrentAgents: loaded.maxConcurrentAgents ?? 3,
         agentModels: {
-          coder: (loaded as any).agent_models?.coder ?? (loaded as any).agentModels?.coder ?? "opus",
-          tester: (loaded as any).agent_models?.tester ?? (loaded as any).agentModels?.tester ?? "sonnet",
-          reviewer: (loaded as any).agent_models?.reviewer ?? (loaded as any).agentModels?.reviewer ?? "opus",
-          unitySetup: (loaded as any).agent_models?.unity_setup ?? (loaded as any).agentModels?.unitySetup ?? "sonnet",
-          committer: (loaded as any).agent_models?.committer ?? (loaded as any).agentModels?.committer ?? "haiku",
+          coder: loaded.agentModels?.coder ?? "opus",
+          tester: loaded.agentModels?.tester ?? "sonnet",
+          reviewer: loaded.agentModels?.reviewer ?? "opus",
+          unitySetup: loaded.agentModels?.unitySetup ?? "sonnet",
+          committer: loaded.agentModels?.committer ?? "haiku",
         },
-        fontSize: (loaded as any).font_size ?? (loaded as any).fontSize ?? 13,
-        sidebarCollapsed: (loaded as any).sidebar_collapsed ?? (loaded as any).sidebarCollapsed ?? false,
-        theme: (loaded as any).theme ?? "dark",
-        reducedMotion: (loaded as any).reduced_motion ?? (loaded as any).reducedMotion ?? false,
+        fontSize: loaded.fontSize ?? 13,
+        sidebarCollapsed: loaded.sidebarCollapsed ?? false,
+        theme: loaded.theme ?? "dark",
+        reducedMotion: loaded.reducedMotion ?? false,
       };
       settings.set({ ...local });
     } catch {
