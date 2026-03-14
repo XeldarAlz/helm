@@ -57,8 +57,16 @@ impl ProcessManager {
             return Err("Session already has a running process".to_string());
         }
 
-        let mut cmd = Command::new(&self.cli_path);
-        cmd.stdin(std::process::Stdio::piped())
+        // Split cli_path into executable and arguments so users can set e.g.
+        // "claude --dangerously-skip-permissions" or "/usr/local/bin/claude --flag"
+        let parts: Vec<&str> = self.cli_path.split_whitespace().collect();
+        let (executable, extra_args) = parts
+            .split_first()
+            .ok_or_else(|| "CLI path is empty".to_string())?;
+
+        let mut cmd = Command::new(executable);
+        cmd.args(extra_args)
+            .stdin(std::process::Stdio::piped())
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped());
 
@@ -68,7 +76,7 @@ impl ProcessManager {
 
         let mut child = cmd
             .spawn()
-            .map_err(|e| format!("Failed to spawn '{}': {}", self.cli_path, e))?;
+            .map_err(|e| format!("Failed to spawn '{}': {}", executable, e))?;
 
         let stdin = child
             .stdin
