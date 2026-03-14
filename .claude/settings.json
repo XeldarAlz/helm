@@ -1,0 +1,83 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/check-pure-csharp.sh",
+            "timeout": 10,
+            "statusMessage": "Checking pure C# constraint..."
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/check-naming-conventions.sh",
+            "timeout": 10,
+            "statusMessage": "Checking naming conventions..."
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/check-no-linq-hotpath.sh",
+            "timeout": 10,
+            "statusMessage": "Checking LINQ on hot paths..."
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/check-no-runtime-instantiate.sh",
+            "timeout": 10,
+            "statusMessage": "Checking runtime instantiation..."
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/check-test-exists.sh",
+            "timeout": 15,
+            "statusMessage": "Checking test coverage..."
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/check-compile.sh",
+            "timeout": 10,
+            "statusMessage": "Checking syntax..."
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/update-progress.sh",
+            "timeout": 5,
+            "statusMessage": "Logging activity..."
+          }
+        ]
+      }
+    ]
+  }
+}
