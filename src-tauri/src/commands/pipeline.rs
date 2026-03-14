@@ -318,6 +318,7 @@ pub fn get_orchestration_state(
 pub async fn send_orchestration_command(
     state: State<'_, AppState>,
     process_mgr: State<'_, crate::commands::session::ProcessMgr>,
+    app: tauri::AppHandle,
     command: String,
 ) -> Result<(), String> {
     // Find active orchestration session
@@ -341,5 +342,5 @@ pub async fn send_orchestration_command(
     };
 
     let mut mgr = process_mgr.lock().await;
-    mgr.send(&session_id, cmd).await
+    mgr.send(&session_id, cmd, app).await
 }
