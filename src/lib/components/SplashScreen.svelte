@@ -101,22 +101,13 @@
     class:opacity-100={logoVisible}
     class:scale-100={logoVisible}
   >
-    <svg width="72" height="72" viewBox="0 0 72 72" fill="none">
-      <!-- Helm wheel -->
-      <circle cx="36" cy="36" r="28" stroke="var(--color-accent)" stroke-width="2.5" opacity="0.3" />
-      <circle cx="36" cy="36" r="20" stroke="var(--color-accent)" stroke-width="2" opacity="0.2" />
-      <circle cx="36" cy="36" r="8" fill="var(--color-accent)" opacity="0.9" />
-      <!-- Spokes -->
-      <line x1="36" y1="8" x2="36" y2="28" stroke="var(--color-accent)" stroke-width="2.5" stroke-linecap="round" />
-      <line x1="36" y1="44" x2="36" y2="64" stroke="var(--color-accent)" stroke-width="2.5" stroke-linecap="round" />
-      <line x1="8" y1="36" x2="28" y2="36" stroke="var(--color-accent)" stroke-width="2.5" stroke-linecap="round" />
-      <line x1="44" y1="36" x2="64" y2="36" stroke="var(--color-accent)" stroke-width="2.5" stroke-linecap="round" />
-      <!-- Diagonal spokes -->
-      <line x1="15.2" y1="15.2" x2="22.3" y2="22.3" stroke="var(--color-accent)" stroke-width="2" stroke-linecap="round" opacity="0.6" />
-      <line x1="49.7" y1="49.7" x2="56.8" y2="56.8" stroke="var(--color-accent)" stroke-width="2" stroke-linecap="round" opacity="0.6" />
-      <line x1="56.8" y1="15.2" x2="49.7" y2="22.3" stroke="var(--color-accent)" stroke-width="2" stroke-linecap="round" opacity="0.6" />
-      <line x1="22.3" y1="49.7" x2="15.2" y2="56.8" stroke="var(--color-accent)" stroke-width="2" stroke-linecap="round" opacity="0.6" />
-    </svg>
+    <img
+      src="/app-icon.png"
+      alt="Helm"
+      width="88"
+      height="88"
+      class="rounded-[var(--radius-xl)]"
+    />
   </div>
 
   <!-- App name -->
