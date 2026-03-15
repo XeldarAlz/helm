@@ -104,8 +104,16 @@ public class SystemNameView : MonoBehaviour
 - Assembly definition files
 - Any editor scripts needed for the setup
 
+## UI Canvas Rules (NON-NEGOTIABLE)
+
+- **RectTransform ONLY under Canvas**: Every UI element (panels, views, containers, buttons, text, images) under a Canvas MUST have a RectTransform. NEVER create UI children with plain Transform — this causes completely broken layouts. When using Unity MCP, always verify components include RectTransform.
+- **TextMeshPro for ALL text**: Always use `TextMeshProUGUI` for UI text and `TextMeshPro` for world-space text. NEVER use legacy `UnityEngine.UI.Text`. Ensure the TMPro essential resources are imported.
+- When creating UI hierarchy: Canvas → child objects must all be RectTransform-based (Panel, Image, TMP_Text, Button, etc.)
+
 ## What You Do NOT Do
 - Do NOT write game logic — that's the coder agent's job
 - Do NOT create GameObjects that should be pooled at runtime — set up the pools instead
 - Do NOT hardcode values that should come from ScriptableObjects
 - Do NOT create complex MonoBehaviours — they should be thin adapters only
+- Do NOT create UI elements with plain Transform under a Canvas — always use RectTransform
+- Do NOT use legacy UI.Text — always use TextMeshPro

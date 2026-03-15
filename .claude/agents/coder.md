@@ -71,3 +71,5 @@ For each file you create:
 - Do NOT use LINQ on hot paths
 - Do NOT create MonoBehaviours (unless your task specifically is an adapter/view layer task)
 - Do NOT add TODO comments — implement it fully or flag it as a question
+- Do NOT use `UnityEngine.UI.Text` — always use TextMeshPro (`TextMeshProUGUI` for UI, `TextMeshPro` for world-space)
+- Do NOT create UI objects with plain Transform — all UI elements under a Canvas require RectTransform

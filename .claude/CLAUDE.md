@@ -23,6 +23,8 @@ This project is an AI-powered game development pipeline for Unity 6. It uses mul
 - **Prefabs and ScriptableObjects**: Use ScriptableObjects for all configuration data. Prefabs for all visual elements. Scene should be fully preparable in the editor.
 - **Designer-friendly**: Expose tuning parameters via ScriptableObjects and custom inspectors. Designers should never need to touch code.
 - **Modular and extensible**: Each system is self-contained, easy to extend, and follows SOLID principles.
+- **UI must use RectTransform**: All UI elements under a Canvas MUST use RectTransform, never plain Transform. When creating panels, views, or any UI child, always ensure they have a RectTransform component. Plain Transform under a Canvas causes broken layouts.
+- **Always use TextMeshPro**: All text elements must use TextMeshPro (`TMP_Text`, `TextMeshProUGUI` for UI, `TextMeshPro` for world-space). Never use legacy `UnityEngine.UI.Text`. Always import `TMPro` namespace for text.
 
 ## Agent Templates
 
