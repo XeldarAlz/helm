@@ -5,6 +5,8 @@ pub mod process;
 pub mod state;
 pub mod watcher;
 
+use std::path::PathBuf;
+
 use commands::pipeline::WatcherState;
 use commands::session::ProcessMgr;
 use commands::settings::load_settings_from_disk;
@@ -15,6 +17,16 @@ use watcher::docs::DocsWatcher;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Install a panic hook so crashes are visible in the terminal
+    let default_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        eprintln!("\n[helm:PANIC] {info}");
+        if let Some(loc) = info.location() {
+            eprintln!("[helm:PANIC] at {}:{}:{}", loc.file(), loc.line(), loc.column());
+        }
+        default_hook(info);
+    }));
+
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_store::Builder::default().build())
@@ -24,6 +36,13 @@ pub fn run() {
         .setup(|app| {
             let settings = load_settings_from_disk(&app.handle());
             let state = app.state::<AppState>();
+
+            // Sync project_dir from settings
+            if !settings.project_dir.is_empty() {
+                let mut project_dir = state.project_dir.lock().expect("project_dir lock poisoned");
+                *project_dir = Some(PathBuf::from(&settings.project_dir));
+            }
+
             let mut current = state.settings.lock().expect("settings lock poisoned");
             *current = settings;
             Ok(())

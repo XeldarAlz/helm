@@ -108,12 +108,54 @@ pub fn get_asset_counts(state: State<AppState>) -> Result<AssetCounts, String> {
         }
     };
 
+    if !base.exists() {
+        return Ok(AssetCounts {
+            scripts: 0,
+            tests: 0,
+            prefabs: 0,
+            configs: 0,
+        });
+    }
+
+    // Count .cs files, separating tests from scripts by checking if
+    // any ancestor directory is named "Tests" or "Editor".
+    let mut scripts = 0u32;
+    let mut tests = 0u32;
+    count_cs_files(&base, &mut scripts, &mut tests);
+
     Ok(AssetCounts {
-        scripts: count_files(&base.join("Scripts"), "cs"),
-        tests: count_files(&base.join("Tests"), "cs"),
-        prefabs: count_files(&base.join("Prefabs"), "prefab"),
-        configs: count_files(&base.join("ScriptableObjects"), "asset")
-            + count_files(&base.join("Resources"), "asset"),
+        scripts,
+        tests,
+        prefabs: count_files(&base, "prefab"),
+        configs: count_files(&base, "asset"),
+    })
+}
+
+/// Recursively count .cs files, classifying them as tests or scripts based
+/// on whether they live under a "Tests", "Test", or "Editor" directory.
+fn count_cs_files(dir: &Path, scripts: &mut u32, tests: &mut u32) {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            count_cs_files(&path, scripts, tests);
+        } else if path.extension().is_some_and(|ext| ext == "cs") {
+            if is_test_path(&path) {
+                *tests += 1;
+            } else {
+                *scripts += 1;
+            }
+        }
+    }
+}
+
+/// Check if a path is under a test-related directory.
+fn is_test_path(path: &Path) -> bool {
+    path.components().any(|c| {
+        let s = c.as_os_str().to_string_lossy();
+        s == "Tests" || s == "Test" || s == "Editor"
     })
 }
 

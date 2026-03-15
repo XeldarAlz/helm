@@ -58,6 +58,16 @@ pub fn update_settings(
     state: State<AppState>,
     settings: AppSettings,
 ) -> Result<(), String> {
+    // Sync project_dir
+    {
+        let mut project_dir = state.project_dir.lock().map_err(|e| e.to_string())?;
+        *project_dir = if settings.project_dir.is_empty() {
+            None
+        } else {
+            Some(std::path::PathBuf::from(&settings.project_dir))
+        };
+    }
+
     let mut current = state.settings.lock().map_err(|e| e.to_string())?;
     *current = settings.clone();
     save_settings_to_disk(&app, &settings)?;

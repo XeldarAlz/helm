@@ -3,16 +3,38 @@ import type { PipelineState, AssetCounts } from "$lib/stores/pipeline";
 import type { AppSettings } from "$lib/stores/settings";
 import type { SessionSummary } from "$lib/stores/session";
 
+/** Wrap an invoke call with a timeout to prevent infinite hangs when the backend crashes. */
+function invokeWithTimeout<T>(cmd: string, args?: Record<string, unknown>, timeoutMs = 30_000): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(`Backend did not respond within ${timeoutMs / 1000}s — the app backend may have crashed. Try restarting the app.`));
+    }, timeoutMs);
+
+    invoke<T>(cmd, args)
+      .then((result) => {
+        clearTimeout(timer);
+        resolve(result);
+      })
+      .catch((err) => {
+        clearTimeout(timer);
+        reject(err);
+      });
+  });
+}
+
 export async function createSession(phase: string): Promise<string> {
-  return invoke("create_session", { phase });
+  console.log("[helm:ipc] createSession →", phase);
+  const id = await invokeWithTimeout<string>("create_session", { phase });
+  console.log("[helm:ipc] createSession ← session", id);
+  return id;
 }
 
 export async function sendMessage(sessionId: string, message: string): Promise<void> {
-  return invoke("send_message", { sessionId, message });
+  return invokeWithTimeout("send_message", { sessionId, message });
 }
 
 export async function endSession(sessionId: string): Promise<void> {
-  return invoke("end_session", { sessionId });
+  return invokeWithTimeout("end_session", { sessionId }, 10_000);
 }
 
 export async function getPipelineState(): Promise<PipelineState> {
