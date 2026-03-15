@@ -95,6 +95,14 @@ impl DocsWatcher {
             self.watched_paths.push(docs_dir);
         }
 
+        // Also watch the project root (non-recursive) so we catch
+        // PROGRESS.md written at the root level by agents that lack
+        // write access to docs/.
+        watcher
+            .watch(project_dir, RecursiveMode::NonRecursive)
+            .map_err(|e| format!("Failed to watch project root: {}", e))?;
+        self.watched_paths.push(project_dir.to_path_buf());
+
         // Watch Assets/Scripts/ if it exists (for code changes)
         let scripts_dir = project_dir.join("Assets").join("Scripts");
         if scripts_dir.exists() {

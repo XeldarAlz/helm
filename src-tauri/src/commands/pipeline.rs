@@ -25,10 +25,11 @@ pub fn get_pipeline_state(state: State<AppState>) -> Result<PipelineState, Strin
         }
     };
 
+    let root = project_dir.as_ref().unwrap(); // safe — None handled above
     let gdd = base.join("GDD.md").exists();
     let tdd = base.join("TDD.md").exists();
     let workflow = base.join("WORKFLOW.md").exists();
-    let progress = base.join("PROGRESS.md").exists();
+    let progress = base.join("PROGRESS.md").exists() || root.join("PROGRESS.md").exists();
 
     let phase = if progress {
         "building"
@@ -340,17 +341,25 @@ pub fn get_orchestration_state(
 ) -> Result<OrchestrationState, String> {
     let project_dir = state.project_dir.lock().map_err(|e| e.to_string())?;
 
-    let base = match project_dir.as_ref() {
-        Some(dir) => dir.join("docs"),
+    let root = match project_dir.as_ref() {
+        Some(dir) => dir.clone(),
         None => return Ok(OrchestrationState::default()),
     };
 
-    let progress_path = base.join("PROGRESS.md");
-    if !progress_path.exists() {
-        return Ok(OrchestrationState::default());
-    }
+    // Check docs/PROGRESS.md first (canonical location), then fall back to
+    // ./PROGRESS.md at the project root (agents sometimes write there if
+    // they lack write access to the docs/ directory).
+    let candidates = [
+        root.join("docs").join("PROGRESS.md"),
+        root.join("PROGRESS.md"),
+    ];
 
-    let content = std::fs::read_to_string(&progress_path)
+    let progress_path = match candidates.iter().find(|p| p.exists()) {
+        Some(p) => p,
+        None => return Ok(OrchestrationState::default()),
+    };
+
+    let content = std::fs::read_to_string(progress_path)
         .map_err(|e| format!("Failed to read PROGRESS.md: {}", e))?;
 
     Ok(parse_progress(&content))
