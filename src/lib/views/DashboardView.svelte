@@ -74,8 +74,10 @@
   async function handleQuickAction(action: typeof quickActions[number]) {
     if (action.id === "new-game") {
       startingSession = action.id;
+      console.log("[helm:dashboard] starting new game_idea session…");
       try {
         const sessionId = await createSession("game_idea");
+        console.log("[helm:dashboard] session created:", sessionId);
         currentSession.set({
           id: sessionId,
           phase: "game_idea",
@@ -86,6 +88,7 @@
         });
         activeView.set("chat");
       } catch (e) {
+        console.error("[helm:dashboard] session creation failed:", e);
         addToast(`Failed to start session: ${e}`, "error");
       } finally {
         startingSession = null;

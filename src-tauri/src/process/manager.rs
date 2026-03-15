@@ -125,6 +125,7 @@ impl ProcessManager {
             .arg("--output-format")
             .arg("stream-json")
             .arg("--include-partial-messages")
+            .arg("--dangerously-skip-permissions")
             .stdin(std::process::Stdio::piped())
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped());

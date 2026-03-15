@@ -3,7 +3,7 @@
   import { onMount, onDestroy } from "svelte";
   import { listen, type UnlistenFn } from "@tauri-apps/api/event";
   import { staggeredItem, fadeScale } from "$lib/animations";
-  import { getOrchestrationState } from "$lib/utils/ipc";
+  import { getOrchestrationState, startWatching } from "$lib/utils/ipc";
   import {
     orchestrationState,
     orchStatus,
@@ -45,14 +45,18 @@
     await loadState();
     await startOrchestrationListeners();
 
+    // Ensure file watcher is running so PROGRESS.md changes emit events
+    startWatching().catch(() => {});
+
     // Re-load state when PROGRESS.md changes
     progressListener = await listen("progress-updated", () => {
       loadState();
     });
 
-    // Poll every 5s while orchestrating (backup for file watcher)
+    // Poll every 5s (always, not just while orchestrating) so we can
+    // detect when PROGRESS.md first appears or status transitions to running
     pollInterval = setInterval(() => {
-      if ($isOrchestrating) loadState();
+      loadState();
     }, 5000);
   });
 

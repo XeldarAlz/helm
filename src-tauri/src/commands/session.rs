@@ -21,18 +21,26 @@ pub async fn create_session(
     app: tauri::AppHandle,
     phase: PipelinePhase,
 ) -> Result<SessionId, String> {
+    eprintln!("[helm:session] create_session called — phase={:?}", phase);
+
     let id = Uuid::new_v4();
 
     // 1. Create session state
     let session = SessionState::new(id, phase.clone());
     {
-        let mut sessions = state.sessions.lock().map_err(|e| e.to_string())?;
+        let mut sessions = state.sessions.lock().map_err(|e| {
+            eprintln!("[helm:session] FAILED to lock sessions: {e}");
+            e.to_string()
+        })?;
         sessions.insert(id, session);
     }
 
     // 2. Resolve working directory & CLI path from settings
     let (working_dir, cli_path) = {
-        let settings = state.settings.lock().map_err(|e| e.to_string())?;
+        let settings = state.settings.lock().map_err(|e| {
+            eprintln!("[helm:session] FAILED to lock settings: {e}");
+            e.to_string()
+        })?;
         let dir = if settings.project_dir.is_empty() {
             None
         } else {
@@ -40,6 +48,11 @@ pub async fn create_session(
         };
         (dir, settings.claude_cli_path.clone())
     };
+
+    eprintln!(
+        "[helm:session] session {} — cli={:?} dir={:?}",
+        id, cli_path, working_dir
+    );
 
     // 3. Register the session (no process spawned yet — each message
     //    spawns its own short-lived `claude --print` process)
@@ -61,10 +74,16 @@ pub async fn create_session(
             PipelinePhase::Custom => None,
         };
         if let Some(content) = prompt {
-            mgr.send(&id, content, app).await?;
+            eprintln!("[helm:session] sending phase prompt ({} bytes)", content.len());
+            mgr.send(&id, content, app).await.map_err(|e| {
+                eprintln!("[helm:session] FAILED to send phase prompt: {e}");
+                e
+            })?;
+            eprintln!("[helm:session] phase prompt sent successfully");
         }
     }
 
+    eprintln!("[helm:session] session {} created OK", id);
     Ok(id)
 }
 

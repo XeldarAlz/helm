@@ -122,10 +122,13 @@
   async function confirmNewSession(phase: string) {
     showNewSessionModal = false;
     startingSession = true;
+    selectedPhase = phase;
+    console.log("[helm:chat] starting session — phase:", phase);
 
     try {
       // End existing session if active
       if ($currentSession && isActive) {
+        console.log("[helm:chat] ending previous session:", $currentSession.id);
         await endSession($currentSession.id);
       }
 
@@ -134,6 +137,7 @@
       suggestedAnswers.set([]);
 
       const sessionId = await createSession(phase);
+      console.log("[helm:chat] session created:", sessionId);
       currentSession.set({
         id: sessionId,
         phase,
@@ -143,9 +147,11 @@
         contextUsage: 0,
       });
     } catch (e) {
+      console.error("[helm:chat] session creation failed:", e);
       addToast(`Failed to start session: ${e}`, "error");
     } finally {
       startingSession = false;
+      selectedPhase = null;
     }
   }
 
