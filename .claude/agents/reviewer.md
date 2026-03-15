@@ -42,6 +42,11 @@ After completing the code review checklist, you MUST verify that the code compil
 - [ ] No static mutable state, no singletons
 - [ ] Class structure matches TDD specification
 
+### UI Compliance (CRITICAL — blocks PASS)
+- [ ] All UI elements under a Canvas use RectTransform, NOT plain Transform
+- [ ] All text uses TextMeshPro (`TextMeshProUGUI` / `TextMeshPro`), NOT legacy `UnityEngine.UI.Text`
+- [ ] UI panels/views are created with proper RectTransform anchoring and sizing
+
 ### Performance
 - [ ] No allocations on identified hot paths (no `new`, no boxing, no LINQ, no string ops)
 - [ ] Collections pre-allocated in constructors
