@@ -25,9 +25,11 @@
   import LiveLog from "$lib/components/orchestration/LiveLog.svelte";
   import HookMonitor from "$lib/components/orchestration/HookMonitor.svelte";
   import OrchControls from "$lib/components/orchestration/OrchControls.svelte";
-  import { Activity, Users, ListTodo, Terminal, Shield } from "lucide-svelte";
+  import { Activity, Users, ListTodo, Terminal, Shield, Loader2 } from "lucide-svelte";
+  import { listSessions } from "$lib/utils/ipc";
 
   let mounted = $state(false);
+  let hasActiveOrchSession = $state(false);
   let progressListener: UnlistenFn | undefined;
   let pollInterval: ReturnType<typeof setInterval> | undefined;
 
@@ -40,9 +42,21 @@
     }
   }
 
+  async function checkActiveOrchSession() {
+    try {
+      const sessions = await listSessions();
+      hasActiveOrchSession = sessions.some(
+        (s) => s.phase === "orchestrate" && s.status === "active",
+      );
+    } catch {
+      // ignore
+    }
+  }
+
   onMount(async () => {
     mounted = true;
     await loadState();
+    await checkActiveOrchSession();
     await startOrchestrationListeners();
 
     // Ensure file watcher is running so PROGRESS.md changes emit events
@@ -57,6 +71,7 @@
     // detect when PROGRESS.md first appears or status transitions to running
     pollInterval = setInterval(() => {
       loadState();
+      checkActiveOrchSession();
     }, 5000);
   });
 
@@ -78,7 +93,29 @@
   </TopBar>
 
   <div class="flex-1 overflow-y-auto min-h-0">
-    {#if !hasData && $orchStatus === "idle"}
+    {#if !hasData && $orchStatus === "idle" && hasActiveOrchSession}
+      <!-- Initializing state: session is running but PROGRESS.md not yet written -->
+      <div class="flex flex-col items-center justify-center h-full gap-4 p-8">
+        {#if mounted}
+          <div in:fadeScale={{ duration: 300 }}>
+            <div
+              class="flex items-center justify-center w-16 h-16 rounded-2xl mb-2
+                bg-[var(--color-accent)]/10 text-[var(--color-accent)]"
+            >
+              <Loader2 size={32} class="animate-spin" />
+            </div>
+          </div>
+          <div class="text-center" in:fadeScale={{ duration: 300, delay: 100 }}>
+            <h2 class="text-[var(--text-title)] font-semibold text-[var(--color-text-primary)] mb-1">
+              Initializing Orchestration
+            </h2>
+            <p class="text-[var(--text-body)] text-[var(--color-text-secondary)] max-w-md">
+              An orchestration session is active. Waiting for the agent to begin writing progress data...
+            </p>
+          </div>
+        {/if}
+      </div>
+    {:else if !hasData && $orchStatus === "idle"}
       <!-- Empty state -->
       <div class="flex flex-col items-center justify-center h-full gap-4 p-8">
         {#if mounted}
