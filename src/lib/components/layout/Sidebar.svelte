@@ -2,7 +2,7 @@
   import { _ } from "svelte-i18n";
   import { activeView, sidebarCollapsed, type ViewName } from "$lib/stores/ui";
   import { currentSession } from "$lib/stores/session";
-  import { pipelineState } from "$lib/stores/pipeline";
+  import { pipelineState, phases } from "$lib/stores/pipeline";
   import Divider from "$lib/components/common/Divider.svelte";
   import {
     LayoutDashboard,
@@ -62,6 +62,33 @@
       </span>
     {/if}
   </div>
+
+  <!-- Phase indicator -->
+  {#if !$sidebarCollapsed}
+    {@const activePhase = $phases.find((p) => p.status === "active")}
+    {@const doneCount = $phases.filter((p) => p.status === "done").length}
+    <div class="px-4 pb-2">
+      <div class="flex items-center gap-2 mb-1.5">
+        {#each $phases as phase}
+          <div
+            class="flex-1 h-1 rounded-full transition-all duration-500"
+            style="background: {phase.status === 'done' ? 'var(--color-status-success)' : phase.status === 'active' ? 'var(--color-accent)' : 'var(--color-bg-overlay)'}"
+          ></div>
+        {/each}
+      </div>
+      <p class="text-[10px] text-[var(--color-text-tertiary)] truncate">
+        {#if activePhase}
+          {activePhase.label} in progress
+        {:else if doneCount === $phases.length}
+          Pipeline complete
+        {:else if doneCount > 0}
+          {doneCount}/{$phases.length} phases done
+        {:else}
+          No active pipeline
+        {/if}
+      </p>
+    </div>
+  {/if}
 
   <!-- Navigation -->
   <nav class="flex-1 px-2 py-2 space-y-0.5 overflow-y-auto">

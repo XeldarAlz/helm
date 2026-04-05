@@ -2,11 +2,11 @@
   import { _ } from "svelte-i18n";
   import { onMount } from "svelte";
   import { activeView } from "$lib/stores/ui";
-  import { pipelineState, type AssetCounts } from "$lib/stores/pipeline";
-  import { currentSession, type SessionSummary } from "$lib/stores/session";
+  import { pipelineState, phases, nextPhase, type AssetCounts } from "$lib/stores/pipeline";
+  import { currentSession, messages, suggestedAnswers, type SessionSummary } from "$lib/stores/session";
   import { staggeredItem, fadeScale } from "$lib/animations";
   import { timeAgo } from "$lib/utils/format";
-  import { createSession, getAssetCounts, listSessions, getPipelineState } from "$lib/utils/ipc";
+  import { createSession, endSession, getAssetCounts, listSessions, getPipelineState } from "$lib/utils/ipc";
   import { addToast } from "$lib/stores/toasts";
   import TopBar from "$lib/components/layout/TopBar.svelte";
   import Panel from "$lib/components/layout/Panel.svelte";
@@ -20,67 +20,83 @@
     TestTube2,
     Box,
     Settings2,
-    Check,
-    Circle,
-    Minus,
+    FileText,
+    Bot,
+    ArrowRight,
   } from "lucide-svelte";
 
   let assetCounts = $state<AssetCounts>({ scripts: 0, tests: 0, prefabs: 0, configs: 0 });
   let recentSessions = $state<SessionSummary[]>([]);
   let mounted = $state(false);
-  let startingSession = $state<string | null>(null);
+  let startingPhase = $state<string | null>(null);
 
-  // Pipeline steps with their completion checks
-  const pipelineSteps = $derived([
-    { key: "idea", label: $_("dashboard.pipeline.idea"), done: $pipelineState.gddExists },
-    { key: "architecture", label: $_("dashboard.pipeline.architecture"), done: $pipelineState.tddExists },
-    { key: "planning", label: $_("dashboard.pipeline.planning"), done: $pipelineState.workflowExists },
-    { key: "building", label: $_("dashboard.pipeline.building"), done: $pipelineState.progressExists },
-    {
-      key: "complete",
-      label: $_("dashboard.pipeline.complete"),
-      done: $pipelineState.progressExists && $pipelineState.currentPhase === "complete",
-    },
-  ]);
+  // Quick actions — context-aware based on pipeline state
+  const quickActions = $derived(() => {
+    const next = $nextPhase;
+    const hasActive = $currentSession?.status === "active";
+    const actions: { id: string; icon: typeof Gamepad2; label: string; desc: string; color: string }[] = [];
 
-  // Quick actions
-  const quickActions = $derived([
-    {
-      id: "new-game",
-      icon: Gamepad2,
-      label: $_("dashboard.quickActions.newGame"),
-      desc: $_("dashboard.quickActions.newGameDesc"),
-      color: "var(--color-accent)",
-      phase: "game_idea",
-    },
-    {
-      id: "resume",
-      icon: Play,
-      label: $_("dashboard.quickActions.resume"),
-      desc: $_("dashboard.quickActions.resumeDesc"),
-      color: "var(--color-status-success)",
-      phase: null,
-    },
-    {
-      id: "status",
-      icon: BarChart3,
-      label: $_("dashboard.quickActions.status"),
-      desc: $_("dashboard.quickActions.statusDesc"),
-      color: "var(--color-status-info)",
-      phase: null,
-    },
-  ]);
+    // Primary: start next phase or new game
+    if (next) {
+      actions.push({
+        id: `start-${next.id}`,
+        icon: next.id === "game_idea" ? Gamepad2 : ArrowRight,
+        label: next.id === "game_idea" ? $_("dashboard.quickActions.newGame") : `Start ${next.label}`,
+        desc: next.id === "game_idea" ? $_("dashboard.quickActions.newGameDesc") : `Continue to ${next.label} phase`,
+        color: "var(--color-accent)",
+      });
+    }
 
-  async function handleQuickAction(action: typeof quickActions[number]) {
-    if (action.id === "new-game") {
-      startingSession = action.id;
-      console.log("[helm:dashboard] starting new game_idea session…");
+    // Resume active session
+    if (hasActive) {
+      actions.push({
+        id: "resume",
+        icon: Play,
+        label: $_("dashboard.quickActions.resume"),
+        desc: $_("dashboard.quickActions.resumeDesc"),
+        color: "var(--color-status-success)",
+      });
+    }
+
+    // View docs if any exist
+    if ($pipelineState.gddExists) {
+      actions.push({
+        id: "documents",
+        icon: FileText,
+        label: "View Documents",
+        desc: "Review GDD, TDD, and Workflow",
+        color: "var(--color-status-info)",
+      });
+    }
+
+    // Orchestration status
+    if ($pipelineState.progressExists) {
+      actions.push({
+        id: "status",
+        icon: Bot,
+        label: $_("dashboard.quickActions.status"),
+        desc: $_("dashboard.quickActions.statusDesc"),
+        color: "var(--color-agent-unity)",
+      });
+    }
+
+    return actions;
+  });
+
+  async function handleQuickAction(actionId: string) {
+    if (actionId.startsWith("start-")) {
+      const phaseId = actionId.replace("start-", "");
+      startingPhase = phaseId;
       try {
-        const sessionId = await createSession("game_idea");
-        console.log("[helm:dashboard] session created:", sessionId);
+        if ($currentSession?.status === "active") {
+          await endSession($currentSession.id);
+        }
+        messages.set([]);
+        suggestedAnswers.set([]);
+        const sessionId = await createSession(phaseId);
         currentSession.set({
           id: sessionId,
-          phase: "game_idea",
+          phase: phaseId,
           status: "active",
           startedAt: new Date().toISOString(),
           messageCount: 0,
@@ -88,15 +104,16 @@
         });
         activeView.set("chat");
       } catch (e) {
-        console.error("[helm:dashboard] session creation failed:", e);
         addToast(`Failed to start session: ${e}`, "error");
       } finally {
-        startingSession = null;
+        startingPhase = null;
       }
-    } else if (action.id === "resume") {
+    } else if (actionId === "resume") {
       activeView.set("chat");
-    } else if (action.id === "status") {
+    } else if (actionId === "status") {
       activeView.set("orchestration");
+    } else if (actionId === "documents") {
+      activeView.set("documents");
     }
   }
 
@@ -114,7 +131,6 @@
   onMount(async () => {
     mounted = true;
 
-    // Fetch asset counts and sessions in parallel
     const [assets, sessions, pipeline] = await Promise.allSettled([
       getAssetCounts(),
       listSessions(),
@@ -158,123 +174,57 @@
         </div>
       {/if}
 
-      <!-- Quick actions -->
+      <!-- Quick actions — dynamic based on pipeline state -->
       {#if mounted}
-        <div class="grid grid-cols-3 gap-4">
-          {#each quickActions as action, i}
-            <button
-              class="group relative flex flex-col items-center gap-3 p-6 rounded-[var(--radius-xl)] border border-[var(--color-border-subtle)]
-                bg-[var(--color-bg-surface)] cursor-pointer text-left
-                hover:border-[var(--color-border-default)] hover:bg-[var(--color-bg-elevated)]
-                hover:-translate-y-0.5 hover:shadow-[var(--shadow-lg)]
-                active:translate-y-0 active:shadow-[var(--shadow-sm)]
-                transition-all duration-200 ease-out
-                disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
-              onclick={() => handleQuickAction(action)}
-              disabled={startingSession !== null}
-              in:staggeredItem={{ index: i, staggerDelay: 80, duration: 300, distance: 12 }}
-            >
-              <!-- Icon -->
-              <div
-                class="flex items-center justify-center w-12 h-12 rounded-[var(--radius-lg)] transition-all duration-200"
-                style="background: color-mix(in srgb, {action.color} 12%, transparent); color: {action.color}"
+        {@const actions = quickActions()}
+        {#if actions.length > 0}
+          <div class="grid gap-4" style="grid-template-columns: repeat({Math.min(actions.length, 4)}, 1fr)">
+            {#each actions as action, i}
+              {@const Icon = action.icon}
+              <button
+                class="group relative flex flex-col items-center gap-3 p-6 rounded-[var(--radius-xl)] border border-[var(--color-border-subtle)]
+                  bg-[var(--color-bg-surface)] cursor-pointer text-left
+                  hover:border-[var(--color-border-default)] hover:bg-[var(--color-bg-elevated)]
+                  hover:-translate-y-0.5 hover:shadow-[var(--shadow-lg)]
+                  active:translate-y-0 active:shadow-[var(--shadow-sm)]
+                  transition-all duration-200 ease-out
+                  disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+                onclick={() => handleQuickAction(action.id)}
+                disabled={startingPhase !== null}
+                in:staggeredItem={{ index: i, staggerDelay: 80, duration: 300, distance: 12 }}
               >
-                {#if startingSession === action.id}
-                  <Spinner size="md" />
-                {:else}
-                  {@const Icon = action.icon}<Icon size={24} />
-                {/if}
-              </div>
-
-              <!-- Text -->
-              <div class="text-center">
-                <span class="block text-[var(--text-body)] font-semibold text-[var(--color-text-primary)] mb-0.5">
-                  {action.label}
-                </span>
-                <span class="block text-[var(--text-caption)] text-[var(--color-text-secondary)] leading-snug">
-                  {action.desc}
-                </span>
-              </div>
-
-              <!-- Hover glow -->
-              <div
-                class="absolute inset-0 rounded-[var(--radius-xl)] opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-                style="box-shadow: inset 0 0 24px color-mix(in srgb, {action.color} 6%, transparent)"
-              ></div>
-            </button>
-          {/each}
-        </div>
-      {/if}
-
-      <!-- Pipeline stepper -->
-      {#if mounted}
-        <Panel class="p-5" >
-          <div in:staggeredItem={{ index: 3, staggerDelay: 80, duration: 300, distance: 12 }}>
-            <h3 class="text-[var(--text-body)] font-semibold text-[var(--color-text-primary)] mb-4">
-              Pipeline Progress
-            </h3>
-
-            <div class="flex items-center gap-0">
-              {#each pipelineSteps as step, i}
-                <!-- Step node -->
-                <div class="flex flex-col items-center gap-2 flex-1">
-                  <div class="flex items-center w-full">
-                    <!-- Connector before (except first) -->
-                    {#if i > 0}
-                      <div
-                        class="flex-1 h-0.5 transition-colors duration-500"
-                        class:bg-[var(--color-accent)]={step.done || pipelineSteps[i - 1].done}
-                        class:bg-[var(--color-bg-overlay)]={!step.done && !pipelineSteps[i - 1].done}
-                      ></div>
-                    {:else}
-                      <div class="flex-1"></div>
-                    {/if}
-
-                    <!-- Circle -->
-                    <div
-                      class="relative flex items-center justify-center w-8 h-8 rounded-full border-2 transition-all duration-500 shrink-0"
-                      class:border-[var(--color-accent)]={step.done}
-                      class:bg-[var(--color-accent)]={step.done}
-                      class:border-[var(--color-bg-overlay)]={!step.done}
-                      class:bg-[var(--color-bg-surface)]={!step.done}
-                    >
-                      {#if step.done}
-                        <Check size={14} class="text-[var(--color-text-inverse)]" />
-                      {:else}
-                        <Circle size={8} class="text-[var(--color-text-tertiary)]" />
-                      {/if}
-
-                      <!-- Active glow -->
-                      {#if step.done}
-                        <div class="absolute inset-0 rounded-full" style="box-shadow: var(--glow-accent); opacity: 0.5"></div>
-                      {/if}
-                    </div>
-
-                    <!-- Connector after (except last) -->
-                    {#if i < pipelineSteps.length - 1}
-                      <div
-                        class="flex-1 h-0.5 transition-colors duration-500"
-                        class:bg-[var(--color-accent)]={step.done && pipelineSteps[i + 1]?.done}
-                        class:bg-[var(--color-bg-overlay)]={!step.done || !pipelineSteps[i + 1]?.done}
-                      ></div>
-                    {:else}
-                      <div class="flex-1"></div>
-                    {/if}
-                  </div>
-
-                  <!-- Label -->
-                  <span
-                    class="text-[var(--text-caption)] font-medium text-center transition-colors duration-300"
-                    class:text-[var(--color-text-primary)]={step.done}
-                    class:text-[var(--color-text-tertiary)]={!step.done}
-                  >
-                    {step.label}
+                <div
+                  class="flex items-center justify-center w-12 h-12 rounded-[var(--radius-lg)] transition-all duration-200"
+                  style="background: color-mix(in srgb, {action.color} 12%, transparent); color: {action.color}"
+                >
+                  {#if startingPhase && action.id.startsWith("start-")}
+                    <Spinner size="md" />
+                  {:else}
+                    <Icon size={24} />
+                  {/if}
+                </div>
+                <div class="text-center">
+                  <span class="block text-[var(--text-body)] font-semibold text-[var(--color-text-primary)] mb-0.5">
+                    {action.label}
+                  </span>
+                  <span class="block text-[var(--text-caption)] text-[var(--color-text-secondary)] leading-snug">
+                    {action.desc}
                   </span>
                 </div>
-              {/each}
-            </div>
+                <div
+                  class="absolute inset-0 rounded-[var(--radius-xl)] opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+                  style="box-shadow: inset 0 0 24px color-mix(in srgb, {action.color} 6%, transparent)"
+                ></div>
+              </button>
+            {/each}
           </div>
-        </Panel>
+        {:else}
+          <Panel class="p-6 text-center">
+            <p class="text-[var(--text-body)] text-[var(--color-text-secondary)]">
+              Pipeline complete! All phases finished.
+            </p>
+          </Panel>
+        {/if}
       {/if}
 
       <!-- Asset counters -->

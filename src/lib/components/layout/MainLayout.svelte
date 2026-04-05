@@ -1,6 +1,9 @@
 <script lang="ts">
+  import { onMount, onDestroy } from "svelte";
   import { activeView } from "$lib/stores/ui";
+  import { startPipelineWatcher, stopPipelineWatcher } from "$lib/stores/pipeline";
   import Sidebar from "./Sidebar.svelte";
+  import PipelineBar from "./PipelineBar.svelte";
   import ToastContainer from "$lib/components/common/ToastContainer.svelte";
   import NetworkBanner from "$lib/components/common/NetworkBanner.svelte";
   import DashboardView from "$lib/views/DashboardView.svelte";
@@ -22,6 +25,14 @@
     history: SessionHistoryView,
     settings: SettingsView,
   } as const;
+
+  onMount(() => {
+    startPipelineWatcher();
+  });
+
+  onDestroy(() => {
+    stopPipelineWatcher();
+  });
 </script>
 
 <div class="flex h-screen w-screen bg-[var(--color-bg-base)] text-[var(--color-text-primary)] overflow-hidden">
@@ -29,6 +40,7 @@
 
   <main class="flex-1 flex flex-col overflow-hidden">
     <NetworkBanner />
+    <PipelineBar />
     <div class="flex-1 overflow-hidden">
       <svelte:component this={viewComponents[$activeView]} />
     </div>

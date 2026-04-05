@@ -9,6 +9,7 @@
     suggestedAnswers,
     addUserMessage,
   } from "$lib/stores/session";
+  import { phaseJustCompleted, phases, PHASE_ORDER, phaseArtifact } from "$lib/stores/pipeline";
   import { addToast } from "$lib/stores/toasts";
   import { fadeScale, staggeredItem } from "$lib/animations";
   import { createSession, sendMessage, endSession } from "$lib/utils/ipc";
@@ -30,6 +31,8 @@
     CalendarClock,
     Play,
     Terminal,
+    CheckCircle2,
+    ArrowRight,
   } from "lucide-svelte";
 
   let messageListEl = $state<HTMLDivElement | null>(null);
@@ -219,6 +222,52 @@
     }
   });
 
+  // ── Phase completion detection ──────────────────────────────────────────
+
+  let completionBanner = $state<{ phaseLabel: string; artifact: string; nextPhaseId: string; nextPhaseLabel: string } | null>(null);
+  let transitioningToNext = $state(false);
+
+  // Watch for phase completions that match our active session
+  $effect(() => {
+    const completed = $phaseJustCompleted;
+    if (!completed || !$currentSession) return;
+    if (completed !== $currentSession.phase) return;
+
+    // Find the next phase
+    const currentIdx = PHASE_ORDER.findIndex((p) => p.id === completed);
+    const next = currentIdx >= 0 && currentIdx < PHASE_ORDER.length - 1 ? PHASE_ORDER[currentIdx + 1] : null;
+    const artifact = phaseArtifact(completed);
+
+    if (next && artifact) {
+      completionBanner = {
+        phaseLabel: PHASE_ORDER[currentIdx].label,
+        artifact,
+        nextPhaseId: next.id,
+        nextPhaseLabel: next.label,
+      };
+    }
+
+    // Clear the event
+    phaseJustCompleted.set(null);
+  });
+
+  async function handleContinueToNext() {
+    if (!completionBanner || transitioningToNext) return;
+    transitioningToNext = true;
+    const nextId = completionBanner.nextPhaseId;
+    completionBanner = null;
+
+    try {
+      await confirmNewSession(nextId);
+    } finally {
+      transitioningToNext = false;
+    }
+  }
+
+  function dismissBanner() {
+    completionBanner = null;
+  }
+
   // Phase selection options for new session
   const phaseOptions = [
     { id: "build_game", icon: Rocket, color: "var(--color-accent)" },
@@ -280,6 +329,48 @@
         {/if}
       {/if}
     </div>
+
+    <!-- Phase completion banner -->
+    {#if completionBanner}
+      <div
+        class="mx-4 mb-2 p-4 rounded-[var(--radius-lg)] border border-[var(--color-status-success)]
+          bg-[color-mix(in_srgb,var(--color-status-success)_8%,var(--color-bg-surface))]
+          flex items-center gap-3"
+        in:fadeScale={{ duration: 250 }}
+      >
+        <CheckCircle2 size={20} class="text-[var(--color-status-success)] shrink-0" />
+        <div class="flex-1 min-w-0">
+          <p class="text-[var(--text-body)] font-semibold text-[var(--color-text-primary)]">
+            {completionBanner.phaseLabel} complete — {completionBanner.artifact} created
+          </p>
+          <p class="text-[var(--text-caption)] text-[var(--color-text-secondary)]">
+            Ready to continue to the next phase
+          </p>
+        </div>
+        <button
+          class="flex items-center gap-1.5 px-4 py-2 rounded-[var(--radius-md)] text-[13px] font-semibold cursor-pointer
+            bg-[var(--color-accent)] text-[var(--color-text-inverse)]
+            hover:brightness-110 hover:scale-[1.02] active:scale-[0.97]
+            transition-all duration-150
+            disabled:opacity-50 disabled:cursor-not-allowed"
+          onclick={handleContinueToNext}
+          disabled={transitioningToNext}
+        >
+          {#if transitioningToNext}
+            <Spinner size="sm" />
+          {:else}
+            Continue to {completionBanner.nextPhaseLabel}
+            <ArrowRight size={14} />
+          {/if}
+        </button>
+        <button
+          class="text-[var(--color-text-tertiary)] hover:text-[var(--color-text-secondary)] transition-colors cursor-pointer p-1"
+          onclick={dismissBanner}
+        >
+          &times;
+        </button>
+      </div>
+    {/if}
 
     <!-- Suggested answers -->
     {#if isActive && $suggestedAnswers.length > 0}
