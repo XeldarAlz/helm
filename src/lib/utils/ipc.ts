@@ -73,6 +73,16 @@ export async function saveTranscript(sessionId: string): Promise<string> {
   return invoke("save_transcript", { sessionId });
 }
 
+// ── Config Injection ────────────────────────────────────────────────────────
+
+export async function checkClaudeConfig(): Promise<boolean> {
+  return invoke("check_claude_config");
+}
+
+export async function injectClaudeConfig(): Promise<number> {
+  return invoke("inject_claude_config");
+}
+
 // ── Phase 5: File Watcher ───────────────────────────────────────────────────
 
 export async function startWatching(): Promise<void> {

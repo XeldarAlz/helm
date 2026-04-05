@@ -35,6 +35,11 @@ export const PHASE_ORDER = [
   { id: "complete", key: "complete", label: "Complete", command: "" },
 ] as const;
 
+// ── Config injection state ────────────────────────────────────────────────
+
+/** Whether `.claude/` has been injected into the project directory. `null` = not yet checked. */
+export const configInjected = writable<boolean | null>(null);
+
 // ── Core state ────────────────────────────────────────────────────────────
 
 export const pipelineState = writable<PipelineState>({

@@ -66,6 +66,8 @@ pub fn run() {
             commands::pipeline::send_orchestration_command,
             commands::settings::get_settings,
             commands::settings::update_settings,
+            commands::inject::check_claude_config,
+            commands::inject::inject_claude_config,
             commands::git::get_git_log,
             commands::git::get_git_branches,
             commands::git::get_git_status,

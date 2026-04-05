@@ -6,7 +6,16 @@
       "Edit",
       "Bash",
       "Glob",
-      "Grep"
+      "Grep",
+      "Agent",
+      "TaskCreate",
+      "TaskUpdate",
+      "TaskGet",
+      "TaskList",
+      "TaskOutput",
+      "TaskStop",
+      "WebSearch",
+      "WebFetch"
     ]
   },
   "hooks": {
