@@ -12,6 +12,7 @@
     Lightbulb,
     Compass,
     CalendarClock,
+    FolderCog,
     Hammer,
     PartyPopper,
     ArrowRight,
@@ -47,6 +48,7 @@
     game_idea: Lightbulb,
     architect: Compass,
     plan_workflow: CalendarClock,
+    init_project: FolderCog,
     orchestrate: Hammer,
     complete: PartyPopper,
   };
@@ -61,8 +63,8 @@
     }
 
     if (phase.status === "active") {
-      // Go to the active chat session
-      activeView.set("chat");
+      // Go to orchestration for build phase, chat for others
+      activeView.set(phase.id === "orchestrate" ? "orchestration" : "chat");
       return;
     }
 
@@ -94,7 +96,7 @@
         messageCount: 0,
         contextUsage: 0,
       });
-      activeView.set("chat");
+      activeView.set(phaseId === "orchestrate" ? "orchestration" : "chat");
     } catch (e) {
       addToast(`Failed to start phase: ${e}`, "error");
     } finally {

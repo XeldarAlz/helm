@@ -48,7 +48,9 @@
         gddExists: ps.gddExists ?? (ps as any).gdd_exists ?? false,
         tddExists: ps.tddExists ?? (ps as any).tdd_exists ?? false,
         workflowExists: ps.workflowExists ?? (ps as any).workflow_exists ?? false,
+        projectClaudeMdExists: ps.projectClaudeMdExists ?? (ps as any).project_claude_md_exists ?? false,
         progressExists: ps.progressExists ?? (ps as any).progress_exists ?? false,
+        catchUpExists: ps.catchUpExists ?? (ps as any).catch_up_exists ?? false,
         currentPhase: ps.currentPhase ?? (ps as any).current_phase ?? "none",
       });
     } catch {

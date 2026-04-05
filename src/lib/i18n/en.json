@@ -36,6 +36,7 @@
       "idea": "Game Idea",
       "architecture": "Architecture",
       "planning": "Planning",
+      "initialization": "Project Init",
       "building": "Building",
       "complete": "Complete"
     },
@@ -76,6 +77,7 @@
       "game_idea": "Game Idea Workshop",
       "architect": "Architecture Studio",
       "plan_workflow": "Workflow Planning",
+      "init_project": "Project Init",
       "orchestrate": "Orchestration",
       "custom": "Custom Session"
     },
@@ -143,7 +145,8 @@
       "TDD": "Architecture",
       "WORKFLOW": "Workflow",
       "PROGRESS": "Progress",
-      "ACTIVITY_LOG": "Activity Log"
+      "ACTIVITY_LOG": "Activity Log",
+      "CATCH_UP": "Catch-Up Guide"
     },
     "watching": "Live",
     "updated": "Document updated"

@@ -44,6 +44,7 @@
       case "WORKFLOW": return $pipelineState.workflowExists;
       case "PROGRESS": return $pipelineState.progressExists;
       case "ACTIVITY_LOG": return true;
+      case "CATCH_UP": return $pipelineState.catchUpExists;
       default: return false;
     }
   });

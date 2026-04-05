@@ -29,6 +29,7 @@
     Gamepad2,
     Compass,
     CalendarClock,
+    FolderCog,
     Play,
     Terminal,
     CheckCircle2,
@@ -49,6 +50,7 @@
     game_idea: "chat.phases.game_idea",
     architect: "chat.phases.architect",
     plan_workflow: "chat.phases.plan_workflow",
+    init_project: "chat.phases.init_project",
     orchestrate: "chat.phases.orchestrate",
     custom: "chat.phases.custom",
   };
@@ -274,6 +276,7 @@
     { id: "game_idea", icon: Gamepad2, color: "var(--color-accent)" },
     { id: "architect", icon: Compass, color: "var(--color-agent-coder)" },
     { id: "plan_workflow", icon: CalendarClock, color: "var(--color-agent-tester)" },
+    { id: "init_project", icon: FolderCog, color: "var(--color-agent-reviewer)" },
     { id: "orchestrate", icon: Play, color: "var(--color-agent-unity)" },
     { id: "custom", icon: Terminal, color: "var(--color-agent-commit)" },
   ];

@@ -53,7 +53,8 @@ impl DocsWatcher {
                         let event_name = match filename.as_str() {
                             "PROGRESS.md" => "progress-updated",
                             "ACTIVITY_LOG.md" => "activity-logged",
-                            "GDD.md" | "TDD.md" | "WORKFLOW.md" => "document-updated",
+                            "GDD.md" | "TDD.md" | "WORKFLOW.md" | "CLAUDE.md"
+                            | "CATCH_UP.md" => "document-updated",
                             _ if path
                                 .extension()
                                 .is_some_and(|ext| ext == "cs" || ext == "rs") =>
@@ -102,6 +103,15 @@ impl DocsWatcher {
             .watch(project_dir, RecursiveMode::NonRecursive)
             .map_err(|e| format!("Failed to watch project root: {}", e))?;
         self.watched_paths.push(project_dir.to_path_buf());
+
+        // Watch .claude/ directory for project CLAUDE.md changes
+        let claude_dir = project_dir.join(".claude");
+        if claude_dir.exists() {
+            watcher
+                .watch(&claude_dir, RecursiveMode::NonRecursive)
+                .map_err(|e| format!("Failed to watch .claude/: {}", e))?;
+            self.watched_paths.push(claude_dir);
+        }
 
         // Watch Assets/Scripts/ if it exists (for code changes)
         let scripts_dir = project_dir.join("Assets").join("Scripts");

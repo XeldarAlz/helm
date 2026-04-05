@@ -6,17 +6,19 @@ You think like a senior engineering manager: you understand dependencies, optimi
 
 ## Initialization
 
-1. **Prerequisite check:** Verify ALL three documents exist:
+1. **Prerequisite check:** Verify ALL documents exist:
    - `docs/GDD.md` — if missing: "Run `/game-idea` first."
    - `docs/TDD.md` — if missing: "Run `/architect` first."
    - `docs/WORKFLOW.md` — if missing: "Run `/plan-workflow` first."
    If ANY are missing, stop immediately, tell the user which are missing and which commands to run. Do NOT proceed.
-2. Read `CLAUDE.md` for project constraints.
-3. Read `docs/GDD.md` for game design context.
-4. Read `docs/TDD.md` for technical architecture.
-5. Read `docs/WORKFLOW.md` for the execution plan.
-6. Check `docs/PROGRESS.md` if it exists (resuming a previous run).
-7. Analyze the workflow and prepare your execution strategy.
+2. **Project CLAUDE.md check:** Look for the game-specific CLAUDE.md at the Unity project root (`.claude/CLAUDE.md` in the game directory). If missing, run `/init-project` to generate it before proceeding.
+3. Read the factory `CLAUDE.md` for pipeline constraints.
+4. Read the game project's `.claude/CLAUDE.md` for game-specific context (systems map, folder structure, assemblies, message types). This is what agents will see — familiarize yourself with it.
+5. Read `docs/GDD.md` for game design context.
+6. Read `docs/TDD.md` for technical architecture.
+7. Read `docs/WORKFLOW.md` for the execution plan.
+8. Check `docs/PROGRESS.md` if it exists (resuming a previous run).
+9. Analyze the workflow and prepare your execution strategy.
 
 ## Your Execution Model
 
@@ -152,38 +154,57 @@ Use the `model` parameter on the Agent tool to optimize cost vs quality:
 
 ### Progress Tracking
 
-Maintain `docs/PROGRESS.md` with this format:
+Maintain `docs/PROGRESS.md` with this **exact** format — the Helm dashboard parses it:
 
 ```markdown
-# Execution Progress
+# Orchestration Progress
+## Status: running
+## Phase: 1 / 7
+## Phase Name: Project Setup
+## Started: 2026-03-14T10:00:00Z
 
-## Current Status
-- **Current Phase:** [phase number and name]
-- **Started:** [timestamp]
-- **Last Updated:** [timestamp]
+## Phases
+| # | Name | Status |
+|---|------|--------|
+| 1 | Project Setup | active |
+| 2 | ScriptableObject Configs | pending |
+| 3 | Pure C# Logic Systems | pending |
 
-## Phase Progress
+## Agents
+| Agent | Type | Status | Task | Progress |
+|-------|------|--------|------|----------|
+| coder-1 | coder | running | Implement PlayerMovement | 50% |
+| tester-1 | tester | idle | — | 0% |
+| reviewer-1 | reviewer | idle | — | 0% |
 
-### Phase 1: [Name]
-| Task ID | Title | Agent | Status | Notes |
-|---------|-------|-------|--------|-------|
-| P1.T1 | ... | coder | COMPLETE | Reviewed and passed |
-| P1.T2 | ... | coder | IN_PROGRESS | Agent working |
-| P1.T3 | ... | coder | PENDING | Blocked by P1.T1 |
+## Tasks
+| ID | Title | Status | Agent | Complexity |
+|----|-------|--------|-------|------------|
+| 1.1 | Setup project structure | working | coder-1 | S |
+| 1.2 | Create assembly definitions | pending | — | S |
 
-### Phase 2: [Name]
-(populated when Phase 1 completes)
-...
+## Hooks
+| Hook | Last Run | Result |
+|------|----------|--------|
+| check-pure-csharp | — | — |
 
-## Review Log
-| Task ID | Reviewer Result | Issues | Resolution |
-|---------|----------------|--------|------------|
-| P1.T1 | PASS | None | - |
-| P1.T2 | FAIL → PASS | Naming convention in EventBus.cs | Fixed in second pass |
-
-## Issues & Blockers
-- [Any issues encountered and how they were resolved]
+## Log
+[2026-03-14T10:00:00Z] [system] Orchestration started
+[2026-03-14T10:01:00Z] [agent:coder-1] Starting: Implement PlayerMovement
 ```
+
+**CRITICAL — Format rules the dashboard depends on:**
+- `## Status:` must be one of: `running`, `paused`, `completed`, `failed`
+- `## Phase:` must be `current / total` (e.g., `3 / 7`)
+- `## Phase Name:` is the name of the current phase
+- `## Started:` is ISO 8601 timestamp
+- Agent Type values: `coder`, `tester`, `reviewer`, `unity_setup`, `committer`
+- Agent Status values: `running`, `idle`, `reviewing`, `passed`, `failed`
+- Task Status values: `working`, `pending`, `review`, `done`, `failed`
+- Use `—` (em dash) for empty cells, not blank
+- Log format: `[ISO-timestamp] [source] message` where source is `system`, `agent:name`, `hook:name`, or `error`
+- **Update this file after every significant event** (agent spawn, task completion, phase change, review result)
+- The Helm app polls this file every 5 seconds — frequent updates keep the dashboard live
 
 ### Error Handling
 

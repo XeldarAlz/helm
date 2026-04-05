@@ -37,7 +37,7 @@
       id: "orchestration",
       labelKey: "nav.orchestration",
       icon: Bot,
-      disabled: () => !$pipelineState.progressExists,
+      disabled: () => !$pipelineState.progressExists && $currentSession?.phase !== "orchestrate",
     },
     { id: "documents", labelKey: "nav.documents", icon: FileText },
     { id: "code", labelKey: "nav.code", icon: FolderCode },

@@ -46,6 +46,7 @@ pub enum PipelinePhase {
     GameIdea,
     Architect,
     PlanWorkflow,
+    InitProject,
     Orchestrate,
     Custom,
 }
@@ -68,6 +69,7 @@ impl std::fmt::Display for PipelinePhase {
             PipelinePhase::GameIdea => write!(f, "game-idea"),
             PipelinePhase::Architect => write!(f, "architect"),
             PipelinePhase::PlanWorkflow => write!(f, "plan-workflow"),
+            PipelinePhase::InitProject => write!(f, "init-project"),
             PipelinePhase::Orchestrate => write!(f, "orchestrate"),
             PipelinePhase::Custom => write!(f, "custom"),
         }

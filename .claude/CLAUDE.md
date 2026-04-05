@@ -7,8 +7,9 @@ This project is an AI-powered game development pipeline for Unity 6. It uses mul
 1. `/game-idea` → Interactive GDD creation (Game Design Document)
 2. `/architect` → Technical Design Document (TDD) with full architecture
 3. `/plan-workflow` → Phased execution plan optimized for parallel agent work
-4. `/orchestrate` → Multi-agent orchestrator that executes the plan
-5. `/build-game` → Runs the full pipeline end-to-end
+4. `/init-project` → Generates lean, game-specific CLAUDE.md at Unity project root
+5. `/orchestrate` → Multi-agent orchestrator that executes the plan
+6. `/build-game` → Runs the full pipeline end-to-end
 
 ## Strict Technical Constraints (All Agents Must Follow)
 
@@ -68,9 +69,11 @@ Agent prompt templates for the orchestrator are in `.claude/agents/`:
 - `/dry-run` — Preview what the orchestrator would do without executing
 - `/review-code` — Manual code review on specific files
 - `/add-feature` — Add a feature to an existing game (updates GDD → TDD → WORKFLOW)
+- `/init-project` — Generate game-specific CLAUDE.md for the Unity project (auto-run by `/build-game`)
 - `/validate` — Validate a completed phase before proceeding
 - `/refine-gdd` — Iterate on an existing GDD
 - `/refine-tdd` — Iterate on an existing TDD
+- `/catch-up` — Generate a human-readable codebase comprehension guide (`docs/CATCH_UP.md`)
 
 All commands with prerequisites will check for required documents before running and tell you what's missing.
 

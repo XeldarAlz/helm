@@ -1,6 +1,6 @@
 import { writable, derived } from "svelte/store";
 
-export type DocName = "GDD" | "TDD" | "WORKFLOW" | "PROGRESS" | "ACTIVITY_LOG";
+export type DocName = "GDD" | "TDD" | "WORKFLOW" | "PROGRESS" | "ACTIVITY_LOG" | "CATCH_UP";
 
 export interface DocSection {
   id: string;

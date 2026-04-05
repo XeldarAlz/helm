@@ -70,6 +70,7 @@ pub async fn create_session(
             PipelinePhase::GameIdea => Some(include_str!("../../../.claude/commands/game-idea.md")),
             PipelinePhase::Architect => Some(include_str!("../../../.claude/commands/architect.md")),
             PipelinePhase::PlanWorkflow => Some(include_str!("../../../.claude/commands/plan-workflow.md")),
+            PipelinePhase::InitProject => Some(include_str!("../../../.claude/commands/init-project.md")),
             PipelinePhase::Orchestrate => Some(include_str!("../../../.claude/commands/orchestrate.md")),
             PipelinePhase::Custom => None,
         };

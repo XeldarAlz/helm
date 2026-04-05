@@ -6,7 +6,9 @@ export interface PipelineState {
   gddExists: boolean;
   tddExists: boolean;
   workflowExists: boolean;
+  projectClaudeMdExists: boolean;
   progressExists: boolean;
+  catchUpExists: boolean;
   currentPhase: string;
 }
 
@@ -31,6 +33,7 @@ export const PHASE_ORDER = [
   { id: "game_idea", key: "idea", label: "Idea", command: "/game-idea" },
   { id: "architect", key: "architecture", label: "Architecture", command: "/architect" },
   { id: "plan_workflow", key: "planning", label: "Planning", command: "/plan-workflow" },
+  { id: "init_project", key: "initialization", label: "Init", command: "/init-project" },
   { id: "orchestrate", key: "building", label: "Building", command: "/orchestrate" },
   { id: "complete", key: "complete", label: "Complete", command: "" },
 ] as const;
@@ -46,7 +49,9 @@ export const pipelineState = writable<PipelineState>({
   gddExists: false,
   tddExists: false,
   workflowExists: false,
+  projectClaudeMdExists: false,
   progressExists: false,
+  catchUpExists: false,
   currentPhase: "none",
 });
 
@@ -98,6 +103,7 @@ function isPhaseComplete(phaseId: string, ps: PipelineState): boolean {
     case "game_idea": return ps.gddExists;
     case "architect": return ps.tddExists;
     case "plan_workflow": return ps.workflowExists;
+    case "init_project": return ps.projectClaudeMdExists;
     case "orchestrate": return ps.progressExists && ps.currentPhase === "complete";
     case "complete": return ps.progressExists && ps.currentPhase === "complete";
     default: return false;
@@ -110,6 +116,7 @@ export function phaseArtifact(phaseId: string): string | null {
     case "game_idea": return "GDD.md";
     case "architect": return "TDD.md";
     case "plan_workflow": return "WORKFLOW.md";
+    case "init_project": return "CLAUDE.md";
     case "orchestrate": return "PROGRESS.md";
     default: return null;
   }
@@ -133,13 +140,16 @@ export async function startPipelineWatcher(): Promise<void> {
       if (file.includes("GDD.md")) updates.gddExists = exists;
       if (file.includes("TDD.md")) updates.tddExists = exists;
       if (file.includes("WORKFLOW.md")) updates.workflowExists = exists;
+      if (file.includes("CLAUDE.md") && file.includes(".claude")) updates.projectClaudeMdExists = exists;
       if (file.includes("PROGRESS.md")) updates.progressExists = exists;
+      if (file.includes("CATCH_UP.md")) updates.catchUpExists = exists;
 
       if (Object.keys(updates).length > 0) {
         // Detect newly completed phases
         if (updates.gddExists && !prev.gddExists) phaseJustCompleted.set("game_idea");
         if (updates.tddExists && !prev.tddExists) phaseJustCompleted.set("architect");
         if (updates.workflowExists && !prev.workflowExists) phaseJustCompleted.set("plan_workflow");
+        if (updates.projectClaudeMdExists && !prev.projectClaudeMdExists) phaseJustCompleted.set("init_project");
 
         pipelineState.update((s) => ({ ...s, ...updates }));
       }

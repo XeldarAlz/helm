@@ -5,7 +5,9 @@ pub struct PipelineState {
     pub gdd_exists: bool,
     pub tdd_exists: bool,
     pub workflow_exists: bool,
+    pub project_claude_md_exists: bool,
     pub progress_exists: bool,
+    pub catch_up_exists: bool,
     pub current_phase: String,
 }
 

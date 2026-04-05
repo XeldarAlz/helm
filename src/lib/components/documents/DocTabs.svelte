@@ -10,6 +10,7 @@
     { key: "WORKFLOW", existsKey: "workflowExists" },
     { key: "PROGRESS", existsKey: "progressExists" },
     { key: "ACTIVITY_LOG", existsKey: "progressExists" },
+    { key: "CATCH_UP", existsKey: "catchUpExists" },
   ];
 
   function exists(tab: typeof tabs[number]): boolean {

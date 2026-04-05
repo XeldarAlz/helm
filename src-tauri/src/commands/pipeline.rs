@@ -19,7 +19,9 @@ pub fn get_pipeline_state(state: State<AppState>) -> Result<PipelineState, Strin
                 gdd_exists: false,
                 tdd_exists: false,
                 workflow_exists: false,
+                project_claude_md_exists: false,
                 progress_exists: false,
+                catch_up_exists: false,
                 current_phase: "none".to_string(),
             });
         }
@@ -29,10 +31,14 @@ pub fn get_pipeline_state(state: State<AppState>) -> Result<PipelineState, Strin
     let gdd = base.join("GDD.md").exists();
     let tdd = base.join("TDD.md").exists();
     let workflow = base.join("WORKFLOW.md").exists();
+    let project_claude_md = root.join(".claude").join("CLAUDE.md").exists();
     let progress = base.join("PROGRESS.md").exists() || root.join("PROGRESS.md").exists();
+    let catch_up = base.join("CATCH_UP.md").exists();
 
     let phase = if progress {
         "building"
+    } else if project_claude_md && workflow {
+        "initialized"
     } else if workflow {
         "planning"
     } else if tdd {
@@ -47,7 +53,9 @@ pub fn get_pipeline_state(state: State<AppState>) -> Result<PipelineState, Strin
         gdd_exists: gdd,
         tdd_exists: tdd,
         workflow_exists: workflow,
+        project_claude_md_exists: project_claude_md,
         progress_exists: progress,
+        catch_up_exists: catch_up,
         current_phase: phase.to_string(),
     })
 }
@@ -70,6 +78,7 @@ pub fn read_document(
         "WORKFLOW" => "WORKFLOW.md",
         "PROGRESS" => "PROGRESS.md",
         "ACTIVITY_LOG" => "ACTIVITY_LOG.md",
+        "CATCH_UP" => "CATCH_UP.md",
         _ => return Err(format!("Unknown document: {}", name)),
     };
 
