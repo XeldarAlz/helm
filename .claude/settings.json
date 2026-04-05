@@ -10,6 +10,30 @@
     ]
   },
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/block-scene-edit.sh",
+            "timeout": 3000,
+            "statusMessage": "Checking for scene/prefab edits..."
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/guard-editor-runtime.sh",
+            "timeout": 5000,
+            "statusMessage": "Checking UnityEditor guard..."
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Write|Edit",
@@ -85,6 +109,28 @@
             "command": ".claude/hooks/update-progress.sh",
             "timeout": 5,
             "statusMessage": "Logging activity..."
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/warn-serialization.sh",
+            "timeout": 5000,
+            "statusMessage": "Checking serialization safety..."
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/warn-filename.sh",
+            "timeout": 3000,
+            "statusMessage": "Checking filename matches class..."
           }
         ]
       }
