@@ -48,7 +48,7 @@ Contextual Unity knowledge auto-loaded by agents based on file patterns:
 | **Core** (6) | serialization-safety, event-systems, scriptable-objects, assembly-definitions, unity-mcp-patterns, object-pooling | Yes |
 | **Systems** (10) | urp-pipeline, input-system, addressables, cinemachine, animation, audio, physics, navmesh, ui-toolkit, shader-graph | No |
 | **Gameplay** (6) | character-controller, inventory-system, dialogue-system, save-system, state-machine, procedural-generation | No |
-| **Genre** (8) | hyper-casual, match3, idle-clicker, endless-runner, puzzle, rpg, platformer-2d, topdown | No |
+| **Genre** (12) | hyper-casual, match3, idle-clicker, endless-runner, puzzle, rpg, platformer-2d, topdown, tower-defense, roguelike, card-game, racing | No |
 | **Third-Party** (5) | dotween, unitask, vcontainer, textmeshpro, odin-inspector | No |
 | **Platform** (1) | mobile | No |
 

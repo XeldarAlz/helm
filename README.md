@@ -36,7 +36,7 @@
 
 ## What Is This?
 
-Helm is an AI agent system that turns a one-sentence game idea into a complete Unity 6 project. It coordinates **5 specialized agents** through a **6-stage pipeline**, enforcing production-grade architecture with **11 automated hooks** and drawing on **36 domain-specific skills**.
+Helm is an AI agent system that turns a one-sentence game idea into a complete Unity 6 project. It coordinates **5 specialized agents** through a **6-stage pipeline**, enforcing production-grade architecture with **11 automated hooks** and drawing on **40 domain-specific skills**.
 
 **No GUI required** — the pipeline runs entirely in [Claude Code](https://docs.anthropic.com/en/docs/claude-code) CLI. The optional desktop app (Tauri + Svelte) provides a visual dashboard for monitoring agent orchestration.
 
@@ -60,7 +60,7 @@ Most AI coding tools generate code. Helm generates **entire projects** with enfo
 
 - **Domain-specific enforcement** — 11 hooks that BLOCK bad Unity patterns before they're written. Editing a `.prefab` directly? Blocked. Missing `[FormerlySerializedAs]`? Warned. LINQ in `Update()`? Caught.
 
-- **36 contextual skills** — Not generic code generation. Skills like `serialization-safety`, `object-pooling`, `character-controller`, and `match3` inject Unity-specific knowledge exactly when agents need it.
+- **40 contextual skills** — Not generic code generation. Skills like `serialization-safety`, `object-pooling`, `character-controller`, and `match3` inject Unity-specific knowledge exactly when agents need it.
 
 - **Multi-agent orchestration** — Five specialized agents (Coder, Tester, Reviewer, Unity Setup, Committer) working in parallel, each with distinct responsibilities and quality gates.
 
@@ -171,7 +171,7 @@ All pipeline outputs are saved to `docs/`:
 
 ## Skills
 
-36 domain-specific knowledge modules auto-loaded by agents based on file patterns:
+40 domain-specific knowledge modules auto-loaded by agents based on file patterns:
 
 ### Core (Always Active)
 | Skill | What It Provides |
@@ -218,6 +218,10 @@ All pipeline outputs are saved to `docs/`:
 | `idle-clicker` | Prestige, offline progress, big numbers |
 | `hyper-casual` | Session pacing, tap mechanics |
 | `puzzle` | Constraint solving, hint systems |
+| `tower-defense` | Placement grids, wave spawning, tower upgrades |
+| `roguelike` | Procedural dungeons, permadeath, meta-progression |
+| `card-game` | Deck building, hand management, effect resolution |
+| `racing` | Vehicle physics, drift mechanics, AI opponents |
 
 ### Third-Party
 `dotween` &bull; `unitask` &bull; `vcontainer` &bull; `textmeshpro` &bull; `odin-inspector`
@@ -322,11 +326,11 @@ npm run build:macos
 .claude/
   commands/       # 16 pipeline slash commands
   agents/         # 5 agent prompt templates (coder, tester, reviewer, unity-setup, committer)
-  skills/         # 36 contextual Unity knowledge modules
+  skills/         # 40 contextual Unity knowledge modules
     core/         #   6 always-active skills
     systems/      #   10 Unity system skills
     gameplay/     #   6 gameplay pattern skills
-    genre/        #   8 game genre skills
+    genre/        #   12 game genre skills
     third-party/  #   5 library integration skills
     platform/     #   1 platform optimization skill
   rules/          # 5 coding standard documents
