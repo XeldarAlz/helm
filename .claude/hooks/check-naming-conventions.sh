@@ -20,14 +20,17 @@ fi
 
 ISSUES=""
 
+# Strip comments and string literals to avoid false positives
+STRIPPED=$(sed 's|//.*||g; s/"[^"]*"/""/g' "$FILE_PATH" 2>/dev/null | sed ':a;N;$!ba;s|/\*[^*]*\*\+\([^/*][^*]*\*\+\)*/||g')
+
 # Check for public fields that should be properties (lowercase start = likely a field not property)
-PUBLIC_FIELDS=$(grep -nE "^\s*public\s+(int|float|string|bool|double|long|byte|char|decimal|short|uint|ulong|ushort|sbyte|var)\s+[a-z]" "$FILE_PATH" 2>/dev/null | grep -v "//" | grep -v "(\|)" )
+PUBLIC_FIELDS=$(echo "$STRIPPED" | grep -nE "^\s*public\s+(int|float|string|bool|double|long|byte|char|decimal|short|uint|ulong|ushort|sbyte|var)\s+[a-z]" | grep -v "[()]")
 if [ -n "$PUBLIC_FIELDS" ]; then
     ISSUES="${ISSUES}\nWARNING — Public fields should be properties with PascalCase:\n${PUBLIC_FIELDS}\n"
 fi
 
 # Check for classes/structs/interfaces not in PascalCase
-NON_PASCAL_TYPES=$(grep -nE "^\s*(public|internal|private|protected)?\s*(sealed\s+|abstract\s+|static\s+|partial\s+)*(class|struct|interface|enum|record)\s+[a-z]" "$FILE_PATH" 2>/dev/null)
+NON_PASCAL_TYPES=$(echo "$STRIPPED" | grep -nE "^\s*(public|internal|private|protected)?\s*(sealed\s+|abstract\s+|static\s+|partial\s+)*(class|struct|interface|enum|record)\s+[a-z]")
 if [ -n "$NON_PASCAL_TYPES" ]; then
     ISSUES="${ISSUES}\nWARNING — Types must use PascalCase:\n${NON_PASCAL_TYPES}\n"
 fi

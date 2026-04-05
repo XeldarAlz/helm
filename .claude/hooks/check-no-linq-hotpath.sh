@@ -23,8 +23,11 @@ if [ "$HAS_LINQ" -eq 0 ]; then
     exit 0
 fi
 
+# Strip comments and strings before checking for hot path methods
+STRIPPED=$(sed 's|//.*||g; s/"[^"]*"/""/g' "$FILE_PATH" 2>/dev/null | sed ':a;N;$!ba;s|/\*[^*]*\*\+\([^/*][^*]*\*\+\)*/||g')
+
 # Check if file has hot path methods
-HOT_METHODS=$(grep -nE "(void|IEnumerator|UniTask)\s+(Update|FixedUpdate|LateUpdate|Tick|Execute|OnUpdate|Process)\s*\(" "$FILE_PATH" 2>/dev/null)
+HOT_METHODS=$(echo "$STRIPPED" | grep -nE "(void|IEnumerator|UniTask)\s+(Update|FixedUpdate|LateUpdate|Tick|Execute|OnUpdate|Process)\s*\(")
 if [ -n "$HOT_METHODS" ]; then
     echo "WARNING: File imports System.Linq AND contains hot path methods!"
     echo "File: $FILE_PATH"

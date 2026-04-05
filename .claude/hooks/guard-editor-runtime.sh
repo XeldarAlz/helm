@@ -32,9 +32,12 @@ if [ -z "$NEW_CONTENT" ]; then
     exit 0
 fi
 
+# Strip comments and strings to avoid false positives on commented-out code
+STRIPPED_CONTENT=$(echo "$NEW_CONTENT" | sed 's|//.*||g; s/"[^"]*"/""/g' | sed ':a;N;$!ba;s|/\*[^*]*\*\+\([^/*][^*]*\*\+\)*/||g')
+
 # Check if the new content uses UnityEditor namespace
-if echo "$NEW_CONTENT" | grep -qE '(using\s+UnityEditor|UnityEditor\.)'; then
-    # Check if it's properly guarded with #if UNITY_EDITOR
+if echo "$STRIPPED_CONTENT" | grep -qE '(using\s+UnityEditor|UnityEditor\.)'; then
+    # Check if it's properly guarded with #if UNITY_EDITOR (check original, not stripped)
     if ! echo "$NEW_CONTENT" | grep -qE '#if\s+UNITY_EDITOR'; then
         echo "BLOCKED: UnityEditor namespace used in runtime code without #if UNITY_EDITOR guard." >&2
         echo "" >&2

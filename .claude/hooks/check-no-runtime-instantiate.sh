@@ -29,20 +29,23 @@ fi
 
 ISSUES=""
 
+# Strip comments and string literals to avoid false positives
+STRIPPED=$(sed 's|//.*||g; s/"[^"]*"/""/g' "$FILE_PATH" 2>/dev/null | sed ':a;N;$!ba;s|/\*[^*]*\*\+\([^/*][^*]*\*\+\)*/||g')
+
 # Check for Instantiate calls (not inside pool/factory context)
-INSTANTIATE=$(grep -nE "\bInstantiate\s*[<(]" "$FILE_PATH" 2>/dev/null | grep -v "//")
+INSTANTIATE=$(echo "$STRIPPED" | grep -nE "\bInstantiate\s*[<(]")
 if [ -n "$INSTANTIATE" ]; then
     ISSUES="${ISSUES}\nInstantiate() calls found (use object pooling instead):\n${INSTANTIATE}\n"
 fi
 
 # Check for new GameObject
-NEW_GO=$(grep -nE "\bnew\s+GameObject\s*\(" "$FILE_PATH" 2>/dev/null | grep -v "//")
+NEW_GO=$(echo "$STRIPPED" | grep -nE "\bnew\s+GameObject\s*\(")
 if [ -n "$NEW_GO" ]; then
     ISSUES="${ISSUES}\nnew GameObject() calls found (use pre-created prefabs from pools):\n${NEW_GO}\n"
 fi
 
 # Check for Destroy (should use pool.Return instead)
-DESTROY=$(grep -nE "\bDestroy\s*\(" "$FILE_PATH" 2>/dev/null | grep -v "//" | grep -v "OnDestroy")
+DESTROY=$(echo "$STRIPPED" | grep -nE "\bDestroy\s*\(" | grep -v "OnDestroy")
 if [ -n "$DESTROY" ]; then
     ISSUES="${ISSUES}\nDestroy() calls found (use pool.Return() or SetActive(false) instead):\n${DESTROY}\n"
 fi
