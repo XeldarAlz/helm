@@ -1,0 +1,69 @@
+name: Propose a New Skill
+description: Suggest a new contextual skill for the agent pipeline
+title: "[Skill]: "
+labels: ["skill-proposal"]
+body:
+  - type: input
+    id: skill-name
+    attributes:
+      label: Skill Name
+      description: A short kebab-case name for the skill.
+      placeholder: e.g., terrain-system, netcode, particle-effects
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      description: Which skill category does this belong to?
+      options:
+        - core
+        - systems
+        - gameplay
+        - genre
+        - third-party
+        - platform
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What Unity patterns, systems, or APIs does this skill cover?
+      placeholder: Describe the scope of this skill and what agents would learn from it.
+    validations:
+      required: true
+
+  - type: input
+    id: glob-patterns
+    attributes:
+      label: Glob Patterns
+      description: Which file patterns should trigger this skill?
+      placeholder: "e.g., **/Terrain*.cs, **/Landscape*.cs"
+    validations:
+      required: true
+
+  - type: textarea
+    id: key-patterns
+    attributes:
+      label: Key Patterns to Document
+      description: What code patterns, common pitfalls, and examples should this skill include?
+      placeholder: |
+        - Pattern: ...
+        - Pitfall: ...
+        - Example: ...
+    validations:
+      required: false
+
+  - type: textarea
+    id: references
+    attributes:
+      label: Reference Resources
+      description: Links to Unity docs, tutorials, or other references.
+      placeholder: |
+        - https://docs.unity3d.com/...
+        - https://...
+    validations:
+      required: false

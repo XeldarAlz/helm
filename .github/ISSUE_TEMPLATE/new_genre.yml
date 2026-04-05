@@ -1,0 +1,65 @@
+name: Propose a New Genre
+description: Suggest a new genre skill for the agent pipeline
+title: "[Genre]: "
+labels: ["genre-proposal"]
+body:
+  - type: input
+    id: genre-name
+    attributes:
+      label: Genre Name
+      description: A short kebab-case name for the genre.
+      placeholder: e.g., tower-defense, roguelike, racing
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Describe the core gameplay loop for this genre.
+      placeholder: What defines this genre? What is the player doing moment-to-moment?
+    validations:
+      required: true
+
+  - type: textarea
+    id: core-mechanics
+    attributes:
+      label: Core Mechanics to Document
+      description: List 3-5 key systems that define this genre.
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+        4. ...
+        5. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reference-games
+    attributes:
+      label: Reference Games
+      description: Name 2-3 example games in this genre.
+      placeholder: |
+        - Game 1
+        - Game 2
+        - Game 3
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: existing-skills
+    attributes:
+      label: Existing Skills It Builds On
+      description: Which existing skills would this genre use?
+      options:
+        - label: character-controller
+        - label: state-machine
+        - label: inventory-system
+        - label: save-system
+        - label: procedural-generation
+        - label: input-system
+        - label: physics
+        - label: animation
+        - label: audio
+        - label: other

@@ -35,3 +35,14 @@
 | 2026-04-05 14:54:46 | Edit | `/Users/xeldar/Development/helm/.claude/agents/coder.md` |
 | 2026-04-05 14:54:50 | Edit | `/Users/xeldar/Development/helm/.claude/agents/reviewer.md` |
 | 2026-04-05 14:54:55 | Edit | `/Users/xeldar/Development/helm/.claude/agents/reviewer.md` |
+| 2026-04-05 16:27:57 | Write | `/Users/xeldar/.claude/plans/functional-dazzling-pumpkin.md` |
+| 2026-04-05 16:50:01 | Write | `/Users/xeldar/.claude/plans/adaptive-frolicking-stallman.md` |
+| 2026-04-05 16:52:38 | Write | `/Users/xeldar/Development/helm/CHANGELOG.md` |
+| 2026-04-05 16:52:38 | Write | `/Users/xeldar/Development/helm/.github/PULL_REQUEST_TEMPLATE.md` |
+| 2026-04-05 16:52:39 | Write | `/Users/xeldar/Development/helm/SHOWCASE.md` |
+| 2026-04-05 16:53:43 | Write | `/Users/xeldar/Development/helm/CONTRIBUTING.md` |
+| 2026-04-05 16:53:53 | Write | `/Users/xeldar/Development/helm/README.md` |
+| 2026-04-05 16:53:55 | Edit | `/Users/xeldar/Development/helm/CONTRIBUTING.md` |
+| 2026-04-05 16:54:56 | Write | `/Users/xeldar/Development/helm/docs/ARCHITECTURE.md` |
+| 2026-04-05 16:55:51 | Write | `/Users/xeldar/Development/helm/examples/README.md` |
+| 2026-04-05 16:56:03 | Edit | `/Users/xeldar/Development/helm/CHANGELOG.md` |
