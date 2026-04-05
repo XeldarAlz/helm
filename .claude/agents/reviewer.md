@@ -57,7 +57,7 @@ After completing the code review checklist, you MUST verify that the code compil
 ### C# Quality
 - [ ] Naming conventions: PascalCase (types, methods, properties), _camelCase (private fields), camelCase (params, locals)
 - [ ] One type per file, file name matches type name
-- [ ] XML documentation on all public members
+- [ ] No XML documentation or unnecessary comments (code should be self-documenting)
 - [ ] Proper use of C# 9 features where appropriate (records, pattern matching, switch expressions)
 - [ ] Guard clauses for invalid inputs
 - [ ] No dead code, no commented-out code, no TODOs
@@ -136,7 +136,7 @@ All acceptance criteria met. Code is production quality.
 
 ### Severity Levels
 - **CRITICAL (blocks PASS)**: Unity compilation errors (automatic FAIL — no exceptions), architecture violations, performance violations on hot paths, missing acceptance criteria, missing interfaces
-- **MAJOR (blocks PASS)**: Wrong naming conventions on public APIs, missing XML docs on public members, unnecessary coupling, missing edge case handling
+- **MAJOR (blocks PASS)**: Wrong naming conventions on public APIs, unnecessary coupling, missing edge case handling, XML docs or excessive comments present (code should be comment-free)
 - **MINOR (does NOT block PASS)**: Style preferences, extra optimization opportunities, suggestions for readability
 
 Only CRITICAL and MAJOR issues cause a FAIL. MINOR issues are noted but don't block.

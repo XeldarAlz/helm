@@ -30,3 +30,8 @@
 | 2026-04-03 11:57:01 | Edit | `/Users/xeldar/Development/helm/.claude/commands/catch-up.md` |
 | 2026-04-03 12:05:14 | Edit | `/Users/xeldar/Development/helm/.claude/commands/orchestrate.md` |
 | 2026-04-03 12:05:24 | Edit | `/Users/xeldar/Development/helm/.claude/commands/build-game.md` |
+| 2026-04-05 14:54:40 | Edit | `/Users/xeldar/Development/helm/.claude/agents/coder.md` |
+| 2026-04-05 14:54:43 | Edit | `/Users/xeldar/Development/helm/.claude/agents/coder.md` |
+| 2026-04-05 14:54:46 | Edit | `/Users/xeldar/Development/helm/.claude/agents/coder.md` |
+| 2026-04-05 14:54:50 | Edit | `/Users/xeldar/Development/helm/.claude/agents/reviewer.md` |
+| 2026-04-05 14:54:55 | Edit | `/Users/xeldar/Development/helm/.claude/agents/reviewer.md` |
