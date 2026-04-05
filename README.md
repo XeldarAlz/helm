@@ -29,7 +29,7 @@
 ---
 
 <p align="center">
-  <img src="docs/assets/orchestration.png" alt="Orchestration Dashboard" width="700" />
+  <img src="docs/assets/dashboard.png" alt="Dashboard" width="1200" />
 </p>
 
 ## What Is This?
@@ -288,20 +288,24 @@ The optional desktop app provides a visual control center for the pipeline:
 | **Git Timeline** | Visual history of all pipeline commits |
 | **Session History** | Resume previous conversations and pipelines |
 
+## Orchestration Dashboard
 <p align="center">
-  <img src="docs/assets/dashboard.png" alt="Dashboard" width="700" />
+  <img src="docs/assets/orchestration.png" alt="Orchestration Dashboard" width="1200" />
 </p>
 
+## Chat Sessions
 <p align="center">
-  <img src="docs/assets/chat-session.png" alt="Chat Session" width="700" />
+  <img src="docs/assets/chat-session.png" alt="Chat Session" width="1200" />
 </p>
 
+## Document Viewer
 <p align="center">
-  <img src="docs/assets/documents.png" alt="Document Viewer" width="700" />
+  <img src="docs/assets/documents.png" alt="Document Viewer" width="1200" />
 </p>
 
+## Code Browser
 <p align="center">
-  <img src="docs/assets/code-browser.png" alt="Code Browser" width="700" />
+  <img src="docs/assets/code-browser.png" alt="Code Browser" width="1200" />
 </p>
 
 ### Running the GUI
@@ -327,30 +331,6 @@ npm run build:macos
 | Animations | [Motion](https://motion.dev/) |
 | AI Backend | [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) |
 | Target Engine | [Unity 6](https://unity.com/) |
-
-## Project Structure
-
-```
-.claude/
-  commands/       # 16 pipeline slash commands
-  agents/         # 5 agent prompt templates (coder, tester, reviewer, unity-setup, committer)
-  skills/         # 40 contextual Unity knowledge modules
-    core/         #   6 always-active skills
-    systems/      #   10 Unity system skills
-    gameplay/     #   6 gameplay pattern skills
-    genre/        #   12 game genre skills
-    third-party/  #   5 library integration skills
-    platform/     #   1 platform optimization skill
-  rules/          # 5 coding standard documents
-  hooks/          # 11 validation shell scripts
-  settings.json   # Hook registration and permissions
-
-src/              # Svelte 5 frontend (GUI)
-src-tauri/        # Rust backend (Tauri 2)
-docs/             # Generated pipeline documents
-examples/         # Example pipeline outputs
-scripts/          # Build and utility scripts
-```
 
 ## Examples
 
