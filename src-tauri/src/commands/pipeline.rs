@@ -396,7 +396,7 @@ pub async fn send_orchestration_command(
 
     let cmd = match command.as_str() {
         "pause" => "/stop",
-        "resume" => "/resume",
+        "resume" => "/continue",
         "stop" => "/stop",
         _ => return Err(format!("Unknown orchestration command: {}", command)),
     };

@@ -72,3 +72,11 @@
 | 2026-04-05 17:18:17 | Edit | `/Users/xeldar/Development/helm/README.md` |
 | 2026-04-05 17:18:18 | Edit | `/Users/xeldar/Development/helm/README.md` |
 | 2026-04-05 17:18:21 | Edit | `/Users/xeldar/Development/helm/README.md` |
+| 2026-04-05 17:27:38 | Write | `/Users/xeldar/.claude/plans/adaptive-frolicking-stallman.md` |
+| 2026-04-05 17:43:38 | Edit | `/Users/xeldar/Development/helm/README.md` |
+| 2026-04-05 17:46:43 | Edit | `/Users/xeldar/Development/helm/.claude/commands/stop.md` |
+| 2026-04-05 17:46:43 | Edit | `/Users/xeldar/Development/helm/.claude/commands/stop.md` |
+| 2026-04-05 17:46:43 | Edit | `/Users/xeldar/Development/helm/.claude/CLAUDE.md` |
+| 2026-04-05 17:46:52 | Edit | `/Users/xeldar/Development/helm/.claude/commands/continue.md` |
+| 2026-04-05 17:46:53 | Edit | `/Users/xeldar/Development/helm/.claude/commands/continue.md` |
+| 2026-04-05 17:46:54 | Edit | `/Users/xeldar/Development/helm/README.md` |

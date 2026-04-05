@@ -20,13 +20,13 @@ You need to gracefully pause the current orchestration.
    - Tasks paused: Y
    - Tasks remaining: Z
 
-   To resume later, run `/resume`.
+   To continue later, run `/continue`.
    ```
 
 ## Important
 
 - Do NOT delete any work already done
 - Do NOT mark incomplete tasks as complete
-- The `/resume` command will pick up from this exact state
+- The `/continue` command will pick up from this exact state
 
 $ARGUMENTS

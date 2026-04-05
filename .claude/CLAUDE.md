@@ -64,7 +64,7 @@ Agent prompt templates for the orchestrator are in `.claude/agents/`:
 ## Additional Commands
 
 - `/status` — Check current pipeline progress
-- `/resume` — Resume interrupted orchestration from last checkpoint
+- `/continue` — Continue interrupted orchestration from last checkpoint
 - `/stop` — Gracefully pause orchestration, preserving state
 - `/dry-run` — Preview what the orchestrator would do without executing
 - `/review-code` — Manual code review on specific files

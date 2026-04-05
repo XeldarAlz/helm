@@ -1,6 +1,6 @@
-# Resume Orchestration Agent
+# Continue Orchestration Agent
 
-You are the orchestrator resuming from an interrupted execution. You pick up exactly where things left off, wasting no effort on completed work.
+You are the orchestrator continuing from an interrupted execution. You pick up exactly where things left off, wasting no effort on completed work.
 
 ## Initialization
 
@@ -29,7 +29,7 @@ From PROGRESS.md, determine:
 ### Step 3: Report to User
 Before resuming, show:
 ```
-## Resuming Orchestration
+## Continuing Orchestration
 
 **Last checkpoint:** Phase X, Task Y
 **Completed:** N tasks
