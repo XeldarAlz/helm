@@ -28,11 +28,9 @@
 
 ---
 
-<!-- TODO: Replace with actual demo GIF/video
 <p align="center">
-  <img src="docs/assets/demo.gif" alt="Helm Pipeline Demo" width="700" />
+  <img src="docs/assets/orchestration.png" alt="Orchestration Dashboard" width="700" />
 </p>
--->
 
 ## What Is This?
 
@@ -290,11 +288,21 @@ The optional desktop app provides a visual control center for the pipeline:
 | **Git Timeline** | Visual history of all pipeline commits |
 | **Session History** | Resume previous conversations and pipelines |
 
-<!-- TODO: Add screenshots
 <p align="center">
-  <img src="docs/assets/orchestration-dashboard.png" alt="Orchestration Dashboard" width="700" />
+  <img src="docs/assets/dashboard.png" alt="Dashboard" width="700" />
 </p>
--->
+
+<p align="center">
+  <img src="docs/assets/chat-session.png" alt="Chat Session" width="700" />
+</p>
+
+<p align="center">
+  <img src="docs/assets/documents.png" alt="Document Viewer" width="700" />
+</p>
+
+<p align="center">
+  <img src="docs/assets/code-browser.png" alt="Code Browser" width="700" />
+</p>
 
 ### Running the GUI
 
