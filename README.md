@@ -34,7 +34,7 @@
 
 ## What Is This?
 
-Helm is an AI agent system that turns a one-sentence game idea into a complete Unity 6 project. It coordinates **5 specialized agents** through a **6-stage pipeline**, enforcing production-grade architecture with **11 automated hooks** and drawing on **40 domain-specific skills**.
+Helm is an AI agent system that turns a one-sentence game idea into a complete Unity 6 project. It coordinates **5 specialized agents** through a **6-stage pipeline**, enforcing production-grade architecture with **12 automated hooks** and drawing on **40+ domain-specific skills**.
 
 **No GUI required** — the pipeline runs entirely in [Claude Code](https://docs.anthropic.com/en/docs/claude-code) CLI. The optional desktop app (Tauri + Svelte) provides a visual dashboard for monitoring agent orchestration.
 
@@ -60,9 +60,13 @@ Most AI coding tools generate code. Helm generates **entire projects** with enfo
 
 - **40 contextual skills** — Not generic code generation. Skills like `serialization-safety`, `object-pooling`, `character-controller`, and `match3` inject Unity-specific knowledge exactly when agents need it.
 
-- **Multi-agent orchestration** — Five specialized agents (Coder, Tester, Reviewer, Unity Setup, Committer) working in parallel, each with distinct responsibilities and quality gates.
+- **Multi-agent orchestration** — Five specialized agents (Coder, Tester, Reviewer, Unity Setup, Committer) working in parallel with real-time mailbox communication, heartbeat monitoring, and context checkpoints.
+
+- **Smart model routing** — Complexity-aware model selection: Haiku for boilerplate, Sonnet for implementation, Opus for architecture review. XL-complexity tasks auto-promote to Opus.
 
 - **Production architecture from day one** — Model-View-System pattern, VContainer DI, MessagePipe messaging, UniTask async, zero-allocation hot paths. No singletons, no god objects, no coroutines.
+
+- **Crash-resilient execution** — Append-only event journal enables deterministic state recovery. No guessing — `/continue` replays every transition.
 
 - **Full pipeline, not just code** — From a text prompt to GDD, TDD, phased workflow plan, implementation with tests, scene setup, and logical git commits.
 
@@ -142,6 +146,8 @@ claude
 | `/refine-gdd` | Iterate on an existing Game Design Document |
 | `/refine-tdd` | Iterate on an existing Technical Design Document |
 | `/catch-up` | Generate human-readable codebase comprehension guide |
+| `/benchmark` | Run agent benchmarks to regression-test prompt/template changes |
+| `/learn` | Extract reusable project-specific patterns into learned skills |
 
 ### Agents
 
@@ -155,6 +161,37 @@ Five specialized agents collaborate during orchestration:
 | **Unity Setup** | Scene Assembly | Scene/prefab/asset setup via Unity MCP tools |
 | **Committer** | Version Control | Splits changes into logical commits by system |
 
+### Agent Communication & Resilience
+
+Agents don't run in isolation — they report progress and survive failures:
+
+| Mechanism | Location | Purpose |
+|-----------|----------|---------|
+| **Mailbox** | `.claude/mailbox/{id}.jsonl` | Append-only progress updates, partial results, blockers |
+| **Heartbeat** | `.claude/heartbeat/{id}.json` | Overwritten timestamp — detects stalls (>10min warn, >20min replace) |
+| **Checkpoint** | `.claude/checkpoint/{id}.md` | Periodic state save — survives context compaction and restarts |
+| **Event Journal** | `docs/EVENTS.jsonl` | Append-only log of every state transition — `/continue` replays it |
+
+When an agent crashes, the orchestrator checks its checkpoint and restarts with "Previous Progress" context — no work is lost.
+
+### Model Routing
+
+The orchestrator selects model tiers based on agent type and task complexity (S/M/L/XL from `WORKFLOW.md`):
+
+| Agent Type | S (simple) | M (moderate) | L (complex) | XL (critical) |
+|------------|-----------|-------------|------------|---------------|
+| Coder | haiku | sonnet | sonnet | opus |
+| Tester | haiku | sonnet | sonnet | opus |
+| Reviewer | opus | opus | opus | opus |
+| Unity Setup | sonnet | sonnet | sonnet | opus |
+| Committer | sonnet | sonnet | sonnet | sonnet |
+
+This cuts cost on boilerplate (haiku is ~10x cheaper) and ensures quality on complex tasks (opus for XL).
+
+### Task Affinity
+
+The orchestrator tracks which files each agent has worked on and prefers re-assigning related tasks to the same agent. An agent that built `WalletSystem.cs` gets priority for `WalletSystemTests.cs`. Scoring: exact file match = 1.0 points, same directory = 0.3 points. Session-scoped, soft hint only.
+
 ### Generated Documents
 
 All pipeline outputs are saved to `docs/`:
@@ -166,10 +203,11 @@ All pipeline outputs are saved to `docs/`:
 | `WORKFLOW.md` | Phased execution plan with tasks and dependencies |
 | `PROGRESS.md` | Real-time orchestration progress tracking |
 | `ACTIVITY_LOG.md` | Auto-generated file activity log (populated by hooks) |
+| `EVENTS.jsonl` | Append-only event journal — source of truth for state recovery |
 
 ## Skills
 
-40 domain-specific knowledge modules auto-loaded by agents based on file patterns:
+40+ domain-specific knowledge modules auto-loaded by agents based on file patterns:
 
 ### Core (Always Active)
 | Skill | What It Provides |
@@ -227,9 +265,13 @@ All pipeline outputs are saved to `docs/`:
 ### Platform
 `mobile` — Touch input, battery optimization, performance budgets
 
+### Learned (Project-Specific)
+
+The `/learn` command extracts reusable patterns from completed implementations and saves them as project-scoped skills in `.claude/skills/learned/`. These grow over time — the more you build, the smarter the agents get on your specific project. Max 20 skills, confidence-tracked, user-curated.
+
 ## Hooks
 
-11 automated validation hooks enforce Unity best practices on every file write:
+12 automated validation hooks enforce Unity best practices on every file write:
 
 ### Blocking Hooks (PreToolUse)
 
@@ -255,6 +297,21 @@ These **warn** about issues after writes:
 | `warn-serialization` | `[SerializeField]` renamed without `[FormerlySerializedAs]` |
 | `warn-filename` | C# filename not matching class name (breaks MonoBehaviour) |
 | `update-progress` | *(silent)* Logs all file activity to `docs/ACTIVITY_LOG.md` |
+| `checkpoint-nudge` | Reminds agents to save checkpoint after 8+ writes without one |
+
+## Benchmarks
+
+Standardized test suite for regression-testing agent templates, skills, and model routing. Run `/benchmark` to score agents against known tasks.
+
+| Category | Tests | What It Measures |
+|----------|-------|-----------------|
+| `pure-logic` | Inventory system implementation | Core C# quality, interface compliance |
+| `hot-path-perf` | Zero-allocation update loop | Performance constraint adherence |
+| `test-writing` | Score system unit tests | Test coverage, structure, naming |
+| `review-accuracy` | Deliberate bug detection | Reviewer catch rate on planted violations |
+| `interface-design` | Type-safe event bus | Architecture quality, SOLID compliance |
+
+Each benchmark includes: task definition, input files, required patterns, forbidden patterns, and a 1-5 qualitative rubric. Results accumulate in `benchmarks/RESULTS.md` for trend tracking across prompt changes.
 
 ## Architecture Rules
 
