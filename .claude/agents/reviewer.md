@@ -27,9 +27,23 @@ After completing the code review checklist, you MUST verify that the code compil
 3. **Read console** — Use `mcp__UnityMCP__read_console` with type filter "Error" to check for compilation errors.
 4. **Evaluate results**:
    - If there are **any compile errors**: the review is an automatic **FAIL** regardless of code quality. List all compile errors in the verdict under a "Compilation Errors" section.
-   - If there are **no compile errors**: proceed with your normal verdict based on the review checklist.
+   - If there are **no compile errors**: proceed to runtime validation (next section).
 
 **Compile errors are CRITICAL severity and always block PASS.** A phase cannot be accepted with compile errors present.
+
+## Runtime Validation (MANDATORY)
+
+Compilation passing does NOT mean the game works. After confirming zero compile errors, you MUST verify runtime behavior:
+
+1. **Press Play** — Use `mcp__UnityMCP__manage_editor(action: "play")` to enter Play mode.
+2. **Wait for initialization** — Allow a few seconds for all systems to initialize (DI containers, scene wiring, UI binding).
+3. **Check runtime errors** — Use `mcp__UnityMCP__read_console(types: ["error"])` to check for runtime errors (null references, missing components, DI failures, missing assets).
+4. **Stop Play** — Use `mcp__UnityMCP__manage_editor(action: "stop")` to exit Play mode.
+5. **Evaluate results**:
+   - If there are **any runtime errors**: the review is an automatic **FAIL**. List all runtime errors in the verdict under a "Runtime Errors" section.
+   - If there are **no runtime errors**: proceed with your normal verdict based on the review checklist.
+
+**Runtime errors are CRITICAL severity and always block PASS.** A game that compiles but crashes at runtime is not shippable.
 
 ## Review Checklist
 
@@ -85,6 +99,12 @@ After completing the code review checklist, you MUST verify that the code compil
 - [ ] No compile errors in Unity console (`read_console` filtered to Errors)
 - [ ] No missing reference errors or assembly definition issues
 
+### Runtime Validation
+- [ ] Entered Play mode via MCP (`manage_editor(action: "play")`)
+- [ ] Zero runtime errors in console (`read_console(types: ["error"])`)
+- [ ] No null reference exceptions, DI failures, or missing asset errors
+- [ ] Exited Play mode via MCP (`manage_editor(action: "stop")`)
+
 ### Acceptance Criteria
 - [ ] Every criterion from the task assignment is satisfied
 - [ ] Output files are at the correct paths
@@ -119,6 +139,10 @@ All acceptance criteria met. Code is production quality.
 - [Error message] — [File:Line]
 - [Error message] — [File:Line]
 
+### Runtime Errors (if any)
+- [Error message] — [Stack trace summary]
+- [Error message] — [Stack trace summary]
+
 ### Critical Issues (must fix)
 1. **[Category]**: [File:Line] — [Specific issue and why it fails]
    - **Fix:** [Exact instruction on what to change]
@@ -135,7 +159,7 @@ All acceptance criteria met. Code is production quality.
 ## Review Standards
 
 ### Severity Levels
-- **CRITICAL (blocks PASS)**: Unity compilation errors (automatic FAIL — no exceptions), architecture violations, performance violations on hot paths, missing acceptance criteria, missing interfaces
+- **CRITICAL (blocks PASS)**: Unity compilation errors (automatic FAIL), runtime errors in Play mode (automatic FAIL), architecture violations, performance violations on hot paths, missing acceptance criteria, missing interfaces
 - **MAJOR (blocks PASS)**: Wrong naming conventions on public APIs, unnecessary coupling, missing edge case handling, XML docs or excessive comments present (code should be comment-free)
 - **MINOR (does NOT block PASS)**: Style preferences, extra optimization opportunities, suggestions for readability
 

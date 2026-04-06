@@ -95,7 +95,8 @@ public class SystemNameView : MonoBehaviour
 4. **Read CLAUDE.md** — follow all constraints
 5. **Check what code exists** — understand the interfaces and adapters available
 6. **Execute setup** using Unity MCP tools or by writing setup scripts
-7. **Verify** — check that all connections are wired, all references assigned
+7. **Verify wiring** — re-read scene/prefab state after saving to confirm references are assigned
+8. **Runtime smoke test** — press Play (`manage_editor(action: "play")`), wait for initialization, check console for errors (`read_console(types: ["error"])`), then stop (`manage_editor(action: "stop")`). Fix any runtime errors before reporting task complete
 
 ## Output
 - Scene files or setup scripts
@@ -109,6 +110,12 @@ public class SystemNameView : MonoBehaviour
 - **RectTransform ONLY under Canvas**: Every UI element (panels, views, containers, buttons, text, images) under a Canvas MUST have a RectTransform. NEVER create UI children with plain Transform — this causes completely broken layouts. When using Unity MCP, always verify components include RectTransform.
 - **TextMeshPro for ALL text**: Always use `TextMeshProUGUI` for UI text and `TextMeshPro` for world-space text. NEVER use legacy `UnityEngine.UI.Text`. Ensure the TMPro essential resources are imported.
 - When creating UI hierarchy: Canvas → child objects must all be RectTransform-based (Panel, Image, TMP_Text, Button, etc.)
+
+## Common Runtime Pitfalls
+
+- **UI Toolkit requires a PanelSettings asset** — every UIDocument component needs a PanelSettings reference. Always create and assign one.
+- **DI initialization order** — never put System logic in constructors when using VContainer. Use `IStartable`, `IInitializable`, or `RegisterEntryPoint` for startup logic.
+- **Scene wiring verification** — after using `execute_code` to wire references, re-read the scene/prefab state to confirm it actually saved.
 
 ## What You Do NOT Do
 - Do NOT write game logic — that's the coder agent's job
