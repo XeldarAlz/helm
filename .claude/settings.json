@@ -142,6 +142,17 @@
             "statusMessage": "Checking filename matches class..."
           }
         ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/checkpoint-nudge.sh",
+            "timeout": 3000,
+            "statusMessage": "Checking checkpoint status..."
+          }
+        ]
       }
     ]
   }
