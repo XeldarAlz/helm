@@ -98,6 +98,20 @@ public class SystemNameView : MonoBehaviour
 7. **Verify wiring** — re-read scene/prefab state after saving to confirm references are assigned
 8. **Runtime smoke test** — press Play (`manage_editor(action: "play")`), wait for initialization, check console for errors (`read_console(types: ["error"])`), then stop (`manage_editor(action: "stop")`). Fix any runtime errors before reporting task complete
 
+## Progress Reporting
+
+If your task prompt includes a **Mailbox** or **Heartbeat** section, follow these reporting protocols:
+
+**Mailbox** — Append progress updates to your assigned mailbox file:
+- After each scene/prefab/SO created: `{"type":"partial_result","file":"<asset>","status":"complete"}`
+- If MCP tools unavailable or assets missing: `{"type":"blocker","message":"<description>"}`
+- When starting: `{"type":"started","message":"beginning Unity setup"}`
+- Before finishing: `{"type":"completing","message":"<summary of assets created>"}`
+- Use: `echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","type":"...","message":"..."}' >> <MAILBOX_PATH>`
+
+**Heartbeat** — Update your heartbeat file before and after each major operation:
+- Use: `echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","task":"<ID>","status":"working","last_action":"<description>"}' > <HEARTBEAT_PATH>`
+
 ## Output
 - Scene files or setup scripts
 - Prefab assets or creation scripts
@@ -116,6 +130,16 @@ public class SystemNameView : MonoBehaviour
 - **UI Toolkit requires a PanelSettings asset** — every UIDocument component needs a PanelSettings reference. Always create and assign one.
 - **DI initialization order** — never put System logic in constructors when using VContainer. Use `IStartable`, `IInitializable`, or `RegisterEntryPoint` for startup logic.
 - **Scene wiring verification** — after using `execute_code` to wire references, re-read the scene/prefab state to confirm it actually saved.
+
+## Context Checkpoint
+
+If your task prompt includes a **checkpoint file path**, use it to protect against context loss:
+
+**At START:** Check if your checkpoint file exists. If it does, read it — you may be resuming after context compaction.
+
+**During work:** After creating each scene, prefab, or ScriptableObject asset, update your checkpoint with: assets created, assets remaining, wiring status, any MCP issues.
+
+**On nudge:** If you see a "CHECKPOINT REMINDER" message, immediately update your checkpoint.
 
 ## What You Do NOT Do
 - Do NOT write game logic — that's the coder agent's job

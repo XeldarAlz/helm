@@ -75,6 +75,19 @@ Examples:
 8. **Verify clean state** — run `git status` to confirm working tree is clean
 9. **Report** — list all commits created with their messages
 
+## Progress Reporting
+
+If your task prompt includes a **Mailbox** or **Heartbeat** section, follow these reporting protocols:
+
+**Mailbox** — Append progress updates to your assigned mailbox file:
+- After each commit group: `{"type":"partial_result","message":"committed: <scope> (<N files>)"}`
+- When starting: `{"type":"started","message":"analyzing git diff for phase commit"}`
+- Before finishing: `{"type":"completing","message":"<N commits created, working tree clean>"}`
+- Use: `echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","type":"...","message":"..."}' >> <MAILBOX_PATH>`
+
+**Heartbeat** — Update your heartbeat file before and after each major operation:
+- Use: `echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","task":"<ID>","status":"working","last_action":"<description>"}' > <HEARTBEAT_PATH>`
+
 ## Rules
 
 - **NEVER use `git add -A` or `git add .`** — always add specific files by name to keep commits atomic
@@ -87,3 +100,13 @@ Examples:
 - **Verify file existence** before adding — if a file was deleted, use `git add` on the deletion
 - **Include meta files** — Unity `.meta` files must be committed alongside their corresponding assets
 - **Docs go last** — PROGRESS.md, ACTIVITY_LOG.md, and other doc updates go in a final "docs" commit
+
+## Context Checkpoint
+
+If your task prompt includes a **checkpoint file path**, use it to protect against context loss:
+
+**At START:** Check if your checkpoint file exists. If it does, read it — you may be resuming after context compaction.
+
+**During work:** After planning commit groups and after each commit, update your checkpoint with: planned groups, commits completed, commits remaining.
+
+**On nudge:** If you see a "CHECKPOINT REMINDER" message, immediately update your checkpoint.

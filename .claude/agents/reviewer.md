@@ -45,6 +45,20 @@ Compilation passing does NOT mean the game works. After confirming zero compile 
 
 **Runtime errors are CRITICAL severity and always block PASS.** A game that compiles but crashes at runtime is not shippable.
 
+## Progress Reporting
+
+If your task prompt includes a **Mailbox** or **Heartbeat** section, follow these reporting protocols:
+
+**Mailbox** — Append progress updates to your assigned mailbox file:
+- After reviewing each file: `{"type":"progress","message":"reviewed <filename>","pct":<percentage>}`
+- After compilation check: `{"type":"progress","message":"compilation: <pass/fail>"}`
+- After runtime validation: `{"type":"progress","message":"runtime: <pass/fail>"}`
+- Before delivering verdict: `{"type":"completing","message":"verdict: <PASS/FAIL>"}`
+- Use: `echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","type":"...","message":"..."}' >> <MAILBOX_PATH>`
+
+**Heartbeat** — Update your heartbeat file before and after each major operation:
+- Use: `echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","task":"<ID>","status":"reviewing","last_action":"<description>"}' > <HEARTBEAT_PATH>`
+
 ## Review Checklist
 
 ### Architecture Compliance
@@ -164,6 +178,16 @@ All acceptance criteria met. Code is production quality.
 - **MINOR (does NOT block PASS)**: Style preferences, extra optimization opportunities, suggestions for readability
 
 Only CRITICAL and MAJOR issues cause a FAIL. MINOR issues are noted but don't block.
+
+## Context Checkpoint
+
+If your task prompt includes a **checkpoint file path**, use it to protect against context loss:
+
+**At START:** Check if your checkpoint file exists. If it does, read it — you may be resuming after context compaction.
+
+**During work:** After completing each major review section (architecture, performance, compilation, runtime), update your checkpoint with: files reviewed so far, issues found, checklist progress, compilation/runtime results.
+
+**On nudge:** If you see a "CHECKPOINT REMINDER" message, immediately update your checkpoint.
 
 ## What You Do NOT Do
 - Do NOT rewrite the code yourself — give specific instructions for the fix

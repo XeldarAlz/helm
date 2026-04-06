@@ -140,11 +140,35 @@ namespace GameName.Tests.Integration
    - No test depends on another test's state?
    - All tests can run independently and in any order?
 
+## Progress Reporting
+
+If your task prompt includes a **Mailbox** or **Heartbeat** section, follow these reporting protocols:
+
+**Mailbox** — Append progress updates to your assigned mailbox file:
+- After writing each test class: `{"type":"partial_result","file":"<filename>","status":"complete"}`
+- If the system-under-test code is missing or has unexpected API: `{"type":"blocker","message":"<description>"}`
+- When starting: `{"type":"started","message":"beginning test task"}`
+- Before finishing: `{"type":"completing","message":"<N test classes, M test methods written>"}`
+- Use: `echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","type":"...","message":"..."}' >> <MAILBOX_PATH>`
+
+**Heartbeat** — Update your heartbeat file before and after each major operation:
+- Use: `echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","task":"<ID>","status":"working","last_action":"<description>"}' > <HEARTBEAT_PATH>`
+
 ## Output Format
 - Test files go at the EXACT path specified in your task
 - One test class per system under test
 - Namespace matches folder path: `GameName.Tests.Unit` or `GameName.Tests.Integration`
 - File naming: `{SystemName}Tests.cs`
+
+## Context Checkpoint
+
+If your task prompt includes a **checkpoint file path**, use it to protect against context loss:
+
+**At START:** Check if your checkpoint file exists. If it does, read it — you may be resuming after context compaction.
+
+**During work:** After every 2-3 test classes written, update your checkpoint with: current task, test classes completed, test classes remaining, any issues discovered in the system-under-test.
+
+**On nudge:** If you see a "CHECKPOINT REMINDER" message, immediately update your checkpoint.
 
 ## What You Do NOT Do
 - Do NOT use mocking frameworks — hand-roll fakes
