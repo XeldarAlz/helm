@@ -89,13 +89,30 @@ For each phase in the workflow:
   - Use `run_in_background: true` for agents that are independent of each other
   - Use `isolation: "worktree"` for coder and tester agents to prevent file conflicts
 
-#### Model Selection for Agents
-Use the `model` parameter on the Agent tool to optimize cost vs quality:
-- **Reviewer agents**: Use `model: "opus"` — review quality is critical, worth the cost
-- **Coder agents**: Use `model: "sonnet"` — good balance of speed and quality for implementation
-- **Tester agents**: Use `model: "sonnet"` — tests follow clear patterns, sonnet handles well
-- **Unity Setup agents**: Use `model: "sonnet"` — procedural setup work
-- **Committer agent**: Use `model: "sonnet"` — procedural git work, clear patterns
+#### Model Routing Table
+
+Select the model tier based on **agent type** and **task complexity** (from WORKFLOW.md):
+
+| Agent Type    | S (simple)  | M (moderate) | L (complex)  | XL (critical) |
+|---------------|-------------|--------------|--------------|----------------|
+| coder         | haiku       | sonnet       | sonnet       | opus           |
+| tester        | haiku       | sonnet       | sonnet       | opus           |
+| unity-setup   | sonnet      | sonnet       | sonnet       | opus           |
+| committer     | sonnet      | sonnet       | sonnet       | sonnet         |
+| reviewer      | opus        | opus         | opus         | opus           |
+
+**Routing rules (in priority order):**
+1. **Reviewer agents ALWAYS use opus** — review quality is the pipeline's quality gate
+2. **XL complexity tasks use opus** for all agent types (except committer) — these are architecturally complex
+3. **S complexity tasks** demote coders/testers to haiku — boilerplate generation, simple interfaces
+4. **Committer always uses sonnet** — procedural git work regardless of phase size
+5. **All other combinations use sonnet** — default balance of speed and quality
+
+**When spawning an agent:**
+1. Read the task's `Complexity` field from WORKFLOW.md
+2. Look up `(agent_type, complexity)` in the routing table
+3. Pass the result as the `model` parameter to the Agent tool
+4. Log the model selection: `[timestamp] [agent:coder-1] Starting: Task P2.T3 (complexity: XL, model: opus)`
 
 #### 3. Result Collection
 - As each agent completes, collect its results
@@ -206,13 +223,140 @@ Maintain `docs/PROGRESS.md` with this **exact** format — the Helm dashboard pa
 - **Update this file after every significant event** (agent spawn, task completion, phase change, review result)
 - The Helm app polls this file every 5 seconds — frequent updates keep the dashboard live
 
+### Event Journal
+
+Maintain an append-only event log at `docs/EVENTS.jsonl`. This is the **authoritative source of truth** for state reconstruction — `/continue` replays it to recover state instead of guessing from PROGRESS.md.
+
+**Format:** One JSON object per line (JSONL). Each event has:
+```json
+{"ts":"2026-04-06T10:00:00Z","event":"<type>","data":{...}}
+```
+
+**Event types and when to emit them:**
+
+| Event | When | Data Fields |
+|-------|------|-------------|
+| `orchestration_started` | At init | `phases`, `tasks_total` |
+| `agent_spawned` | After Agent tool call | `agent`, `type`, `task`, `phase`, `model` |
+| `agent_completed` | Agent returns success | `agent`, `task`, `files` |
+| `agent_failed` | Agent returns failure | `agent`, `task`, `reason` |
+| `task_status` | Any task state change | `task`, `from`, `to`, `agent` |
+| `review_verdict` | Reviewer returns | `task`, `verdict`, `reviewer`, `issues` |
+| `phase_transition` | Phase gate passes | `from`, `to`, `name` |
+| `commit_created` | Committer finishes | `phase`, `sha`, `message` |
+| `orchestration_paused` | User stops | `reason`, `phase` |
+| `orchestration_completed` | All phases done | `phases`, `tasks_total`, `duration` |
+| `orchestration_failed` | Unrecoverable error | `reason`, `phase` |
+| `error` | Any error | `agent`, `task`, `message` |
+| `blocker` | Agent reports blocker | `agent`, `task`, `message` |
+
+**How to write events — CRITICAL:**
+Use `Bash(echo '...' >> docs/EVENTS.jsonl)` for atomic single-line appends. Do **NOT** use the Write tool (it overwrites the entire file). Example:
+```bash
+echo '{"ts":"2026-04-06T10:00:00Z","event":"agent_spawned","data":{"agent":"coder-1","type":"coder","task":"1.1","phase":1,"model":"sonnet"}}' >> docs/EVENTS.jsonl
+```
+
+**When to write events:**
+- After EVERY state change that also updates PROGRESS.md
+- Write the event FIRST (atomic append is crash-safe), THEN update PROGRESS.md
+- At initialization, create `docs/EVENTS.jsonl` with an `orchestration_started` event
+
+### Agent Mailbox
+
+Agents write progress updates to `.claude/mailbox/{agent-id}.jsonl`. This gives the orchestrator fine-grained visibility into agent progress without waiting for completion.
+
+**Setup:** Before spawning any agents, run: `mkdir -p .claude/mailbox .claude/heartbeat`
+
+**When building agent prompts**, include this block (replace `{AGENT_ID}` and `{REPO_ROOT}` with actual values):
+```
+## Progress Reporting
+
+Write progress updates to `{REPO_ROOT}/.claude/mailbox/{AGENT_ID}.jsonl` using:
+  echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","type":"<type>","message":"<msg>"}' >> {REPO_ROOT}/.claude/mailbox/{AGENT_ID}.jsonl
+
+Types: "started", "progress", "partial_result", "blocker", "completing"
+Write when: starting work, after each output file, on blockers, before finishing.
+
+Also update your heartbeat after each major operation:
+  echo '{"ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","task":"{TASK_ID}","status":"working","last_action":"<description>"}' > {REPO_ROOT}/.claude/heartbeat/{AGENT_ID}.json
+```
+
+**Note on worktrees:** Coder and tester agents run with `isolation: "worktree"`, so they operate in a different directory. Pass the **absolute path** of the main repo root (the value of your current working directory) so worktree agents can write to the correct mailbox/heartbeat location.
+
+**Checking mailbox during orchestration:**
+- Before concluding an agent has stalled, read its mailbox for recent messages
+- A `blocker` message means the agent needs help, not a restart
+- When updating the Agents table in PROGRESS.md, pull latest progress from mailbox messages
+- A `completing` message means the agent is about to finish — wait a bit longer before timeout
+
+### Heartbeat Monitoring
+
+Each agent writes a single JSON file to `.claude/heartbeat/{agent-id}.json` (overwritten each time, not appended). This lets the orchestrator detect stalls.
+
+**Monitoring while waiting for background agents:**
+1. After spawning agents with `run_in_background: true`, periodically check heartbeat files
+2. Read each `.claude/heartbeat/{agent-id}.json` and check the `ts` field
+3. **Warning threshold (10 min):** If heartbeat is >10 minutes old and agent hasn't returned, log a warning in the event journal: `{"event":"error","data":{"agent":"...","message":"heartbeat stale >10min"}}`
+4. **Stall threshold (20 min):** If heartbeat is >20 minutes old, consider the agent stalled. Log an `agent_failed` event and spawn a replacement agent with the same task prompt
+5. Before replacing, check the agent's mailbox — a recent `blocker` message may explain the delay
+
+**Cleanup:** After each phase completes, delete all files in `.claude/mailbox/` and `.claude/heartbeat/` to start fresh for the next phase.
+
+### Agent Checkpoints
+
+Agents periodically save their working state to `.claude/checkpoint/{agent-id}.md`. This protects against context window compression losing critical information.
+
+**Setup:** Before spawning agents, run: `mkdir -p .claude/checkpoint`
+
+**When building agent prompts**, include the checkpoint path:
+```
+## Context Checkpoint
+Your checkpoint file: {REPO_ROOT}/.claude/checkpoint/{AGENT_ID}.md
+- At START: Check if this file exists. If it does, read it — you may be resuming after context compaction. Use it to restore your working state.
+- Periodically: After every 2-3 output files, update your checkpoint with:
+  - Current task ID and title
+  - What you've completed so far
+  - What's in progress
+  - Key design decisions made
+  - Any blockers
+- If you see a "CHECKPOINT REMINDER" message from the system, immediately update your checkpoint.
+```
+
+**On agent failure or restart:** Check `.claude/checkpoint/{agent-id}.md` for saved progress. Include its content as "## Previous Progress" in the replacement agent's prompt. This dramatically reduces re-work.
+
+**Cleanup:** After each phase passes review and is committed, delete all files in `.claude/checkpoint/` to start fresh.
+
 ### Error Handling
 
-- **Agent fails/crashes:** Re-read its task, spawn a new agent with the same prompt
-- **Review fails repeatedly (3+ times):** Flag to the user, ask for guidance
-- **File conflicts:** If two agents modify the same file, escalate to user
+- **Agent fails/crashes:** Log an `agent_failed` event, then re-read its task and spawn a new agent with the same prompt
+- **Review fails repeatedly (3+ times):** Log an `error` event, flag to the user, ask for guidance
+- **File conflicts:** If two agents modify the same file, log a `blocker` event and escalate to user
 - **Missing dependencies:** If a task's input files don't exist, check if the producing task is complete. If not, wait or re-order
-- **Unexpected errors:** Log in PROGRESS.md and inform the user
+- **Unexpected errors:** Log an `error` event, update PROGRESS.md, and inform the user
+
+### Task Affinity Tracking
+
+Track which files each agent has worked on during this orchestration session. Use this as a **soft hint** when scheduling — prefer assigning tasks to agents that already have context from related files.
+
+**Recording affinity:** After an agent completes a task (regardless of review outcome):
+1. Note the task's **Input** and **Output** file paths from WORKFLOW.md
+2. Associate those paths with the agent's ID in your memory
+
+**Using affinity for scheduling:** When multiple tasks are ready and multiple agents are available:
+1. For each pending task, list its Input + Output file paths
+2. For each available agent, compute an affinity score:
+   - **Exact file match**: 1.0 point per overlapping file path
+   - **Directory match**: 0.3 points per file where the agent has worked in the same directory (but not this exact file)
+   - **Score** = sum of points / total files in pending task
+3. Assign the task to the agent with the highest affinity score
+4. If all scores are 0 (no prior work overlap), assign round-robin as before
+5. Log the decision: `[timestamp] [system] Assigned P3.T2 to coder-1 (affinity: 0.7, 2 file matches in Systems/Wallet/)`
+
+**Rules:**
+- Affinity is a **soft hint**, not a hard constraint — if the best-affinity agent is busy, assign any available agent
+- This is session-scoped — resets when orchestration restarts (preserved by `/continue` via event journal)
+- Track at most 50 file paths per agent to avoid unbounded growth
+- The affinity map lives in your conversation context (not persisted to a file)
 
 ### Communication with User
 
@@ -237,5 +381,12 @@ When you begin:
 - **If in doubt, ask the user.** Don't make architectural decisions the TDD didn't specify.
 - **Quality over speed.** A failed review is expected and normal — the feedback loop is the point.
 - **Use agent templates.** Read from `.claude/agents/` and customize per task.
+
+### Post-Completion: Pattern Learning (Optional)
+
+After all phases complete successfully and all commits are done:
+1. Ask the user: "All phases complete! Would you like me to extract reusable patterns from this implementation? (`/learn`) This helps future runs on this project."
+2. If yes, inform the user to run `/learn` to analyze the completed work
+3. If no, skip — the user can run `/learn` manually anytime
 
 $ARGUMENTS

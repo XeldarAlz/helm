@@ -12,8 +12,27 @@ You are the orchestrator continuing from an interrupted execution. You pick up e
 
 ## Resume Process
 
-### Step 1: Assess State
-From PROGRESS.md, determine:
+### Step 1: Assess State via Event Journal
+
+**Primary method — Event replay (preferred):**
+If `docs/EVENTS.jsonl` exists, read it line-by-line and replay events to reconstruct state:
+1. Initialize: `phase=0, tasks={}, agents={}, commits=[], status="unknown"`
+2. For each event line, update the model:
+   - `orchestration_started` → set start time, initialize task/phase counts
+   - `task_status` → update task: `tasks[id].status = event.data.to`
+   - `agent_spawned` → register agent with task, type, model
+   - `agent_completed` / `agent_failed` → update agent status, record files
+   - `review_verdict` → update task review state (PASS → done, FAIL → failed)
+   - `phase_transition` → advance phase counter
+   - `commit_created` → record commit SHA
+   - `orchestration_paused` → note pause state
+   - `error` / `blocker` → record for display
+3. After replay, you have the **ground truth**: current phase, every task's final status, every agent's last state, all commits made.
+4. Cross-reference with PROGRESS.md for display info (it may be stale — events are authoritative).
+5. If PROGRESS.md is inconsistent with events, **rebuild PROGRESS.md** from event-derived state.
+
+**Fallback method — PROGRESS.md heuristic (backward compatibility):**
+If `docs/EVENTS.jsonl` does NOT exist, fall back to reading PROGRESS.md and determine:
 - Which phase are we in?
 - Which tasks are COMPLETE (with PASS review)?
 - Which tasks are IN_PROGRESS (may need to be restarted — agents don't survive restarts)?
@@ -22,8 +41,8 @@ From PROGRESS.md, determine:
 - Are there any blockers logged?
 
 ### Step 2: Recovery Plan
-- Tasks marked IN_PROGRESS: Check if their output files exist and are complete. If yes, send to reviewer. If no, restart the task.
-- Tasks marked FAILED: Re-attempt with the review feedback included in the agent prompt.
+- Tasks marked IN_PROGRESS: Check if their output files exist and are complete. If yes, send to reviewer. If no, check `.claude/checkpoint/{agent-id}.md` for saved progress and restart the task with the checkpoint included as "## Previous Progress" in the agent prompt.
+- Tasks marked FAILED: Re-attempt with the review feedback included in the agent prompt. Also check for checkpoint files that may contain useful context.
 - Tasks marked PENDING: Schedule normally.
 
 ### Step 3: Report to User

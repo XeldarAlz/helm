@@ -23,6 +23,15 @@ You are a concise status reporter for the Game Factory pipeline. Your job is to 
    - Any blockers or failed reviews
    - Estimated completion (tasks remaining)
 
+3b. If `docs/EVENTS.jsonl` exists, read the last 10 events and show a timeline:
+   ```
+   ### Recent Events
+   - [10:35:00] phase_transition → Phase 3: Pure C# Logic
+   - [10:34:00] review_verdict → P2.T3 PASS
+   - [10:30:00] agent_completed → coder-1 finished P2.T3
+   ...
+   ```
+
 4. Scan the project for generated code:
    - Count `.cs` files in `Assets/Scripts/`
    - Count test files in `Assets/Tests/` or `Tests/`

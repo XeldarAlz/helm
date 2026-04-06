@@ -5,8 +5,12 @@ You need to gracefully pause the current orchestration.
 ## Process
 
 1. Read `docs/PROGRESS.md` to understand current state.
-2. Update `docs/PROGRESS.md`:
-   - Set any IN_PROGRESS tasks to `PAUSED`
+2. **Log pause event** — append to `docs/EVENTS.jsonl` (if it exists):
+   ```bash
+   echo '{"ts":"<ISO-NOW>","event":"orchestration_paused","data":{"reason":"user requested","phase":<current>}}' >> docs/EVENTS.jsonl
+   ```
+3. Update `docs/PROGRESS.md`:
+   - Set any IN_PROGRESS tasks to `paused`
    - Add a `## Paused` section with:
      - Timestamp
      - Reason (user requested stop)
