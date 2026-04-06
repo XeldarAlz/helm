@@ -51,6 +51,7 @@ Contextual Unity knowledge auto-loaded by agents based on file patterns:
 | **Genre** (12) | hyper-casual, match3, idle-clicker, endless-runner, puzzle, rpg, platformer-2d, topdown, tower-defense, roguelike, card-game, racing | No |
 | **Third-Party** (5) | dotween, unitask, vcontainer, textmeshpro, odin-inspector | No |
 | **Platform** (1) | mobile | No |
+| **Learned** (0-20) | Auto-extracted project-specific patterns via `/learn` | No |
 
 ## Agent Templates
 
@@ -60,6 +61,28 @@ Agent prompt templates for the orchestrator are in `.claude/agents/`:
 - `reviewer.md` — Code review and QA agent
 - `unity-setup.md` — Unity scene/prefab setup agent (uses Unity MCP)
 - `committer.md` — Smart phase committer (splits changes into logical commits after review passes)
+
+## Model Routing
+
+Agents are routed to different model tiers based on agent type and task complexity (S/M/L/XL from WORKFLOW.md):
+- **Reviewer**: Always opus (quality gate)
+- **XL tasks**: Promotes coder/tester/unity-setup to opus
+- **S tasks**: Demotes coder/tester to haiku (boilerplate)
+- **Committer**: Always sonnet
+- **Default**: sonnet
+
+Full routing table in `/orchestrate`.
+
+## Task Affinity
+
+During orchestration, the orchestrator tracks which files each agent has worked on and prefers re-assigning related tasks to the same agent for better context reuse. Session-scoped, resets on restart.
+
+## Agent Communication
+
+Agents report progress via three mechanisms:
+- **Mailbox** (`.claude/mailbox/{agent-id}.jsonl`) — Append-only progress updates, blockers, partial results
+- **Heartbeat** (`.claude/heartbeat/{agent-id}.json`) — Overwritten timestamp for stall detection (>10min warn, >20min replace)
+- **Checkpoint** (`.claude/checkpoint/{agent-id}.md`) — Periodic state save for context compaction resilience
 
 ## Additional Commands
 
@@ -74,6 +97,8 @@ Agent prompt templates for the orchestrator are in `.claude/agents/`:
 - `/refine-gdd` — Iterate on an existing GDD
 - `/refine-tdd` — Iterate on an existing TDD
 - `/catch-up` — Generate a human-readable codebase comprehension guide (`docs/CATCH_UP.md`)
+- `/benchmark` — Run agent benchmarks to regression-test prompt/template changes (see `benchmarks/README.md`)
+- `/learn` — Extract reusable project-specific patterns into `.claude/skills/learned/`
 
 All commands with prerequisites will check for required documents before running and tell you what's missing.
 
@@ -99,6 +124,7 @@ All commands with prerequisites will check for required documents before running
 | `warn-serialization` | Warns if `[SerializeField]` renamed without `[FormerlySerializedAs]` |
 | `warn-filename` | Warns if C# filename doesn't match class name (breaks MonoBehaviour) |
 | `update-progress` | Logs all file activity to `docs/ACTIVITY_LOG.md` |
+| `checkpoint-nudge` | Reminds agents to update their checkpoint file after many writes |
 
 Hooks returning exit code 2 block the agent. All others are warnings (exit 0).
 
@@ -108,5 +134,6 @@ All pipeline documents are saved to `docs/`:
 - `docs/GDD.md` — Game Design Document
 - `docs/TDD.md` — Technical Design Document
 - `docs/WORKFLOW.md` — Execution plan with phases and tasks
-- `docs/PROGRESS.md` — Orchestrator progress tracking
+- `docs/PROGRESS.md` — Orchestrator progress tracking (dashboard-parseable)
 - `docs/ACTIVITY_LOG.md` — Auto-generated file activity log
+- `docs/EVENTS.jsonl` — Append-only event journal (source of truth for `/continue` state recovery)
