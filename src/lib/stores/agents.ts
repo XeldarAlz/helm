@@ -142,3 +142,4 @@ export function stopOrchestrationListeners(): void {
 
 // Re-export types for backward compatibility
 export type { AgentInfo, TaskInfo, HookResultInfo, LogEntry, PhaseInfo };
+export type { MailboxMessage } from "$lib/utils/ipc";

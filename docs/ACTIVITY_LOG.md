@@ -153,3 +153,12 @@
 | 2026-04-06 22:24:10 | Edit | `/Users/xeldar/Development/helm/.claude/CLAUDE.md` |
 | 2026-04-06 22:24:15 | Edit | `/Users/xeldar/Development/helm/.claude/CLAUDE.md` |
 | 2026-04-06 22:24:21 | Edit | `/Users/xeldar/Development/helm/.claude/CLAUDE.md` |
+| 2026-04-06 22:30:35 | Edit | `/Users/xeldar/Development/helm/README.md` |
+| 2026-04-06 22:30:44 | Edit | `/Users/xeldar/Development/helm/README.md` |
+| 2026-04-06 22:30:49 | Edit | `/Users/xeldar/Development/helm/README.md` |
+| 2026-04-06 22:31:07 | Edit | `/Users/xeldar/Development/helm/README.md` |
+| 2026-04-06 22:31:11 | Edit | `/Users/xeldar/Development/helm/README.md` |
+| 2026-04-06 22:31:17 | Edit | `/Users/xeldar/Development/helm/README.md` |
+| 2026-04-06 22:31:22 | Edit | `/Users/xeldar/Development/helm/README.md` |
+| 2026-04-06 22:31:27 | Edit | `/Users/xeldar/Development/helm/README.md` |
+| 2026-04-06 22:31:37 | Edit | `/Users/xeldar/Development/helm/README.md` |

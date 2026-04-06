@@ -366,13 +366,30 @@
                           <span class="text-[11px] font-semibold text-[var(--color-text-primary)]">
                             {agent.id}
                           </span>
+                          {#if agent.model}
+                            <span
+                              class="text-[8px] font-bold px-1 py-0.5 rounded-[2px] uppercase tracking-wider"
+                              style="background: color-mix(in srgb, {agent.model === 'opus' ? 'var(--color-accent)' : agent.model === 'haiku' ? 'var(--color-text-tertiary)' : 'var(--color-status-info)'} 15%, transparent); color: {agent.model === 'opus' ? 'var(--color-accent)' : agent.model === 'haiku' ? 'var(--color-text-tertiary)' : 'var(--color-status-info)'}"
+                            >{agent.model}</span>
+                          {/if}
                           {#if isActive}
                             <div class="w-1.5 h-1.5 rounded-full animate-pulse" style="background: {color}"></div>
                           {:else if agent.status === "passed"}
                             <CheckCircle2 size={10} class="text-[var(--color-status-success)]" />
                           {/if}
+                          {#if agent.health === "stale"}
+                            <div class="w-1.5 h-1.5 rounded-full ml-auto shrink-0" style="background: var(--color-status-warning)" title="Heartbeat stale"></div>
+                          {:else if agent.health === "dead"}
+                            <div class="w-1.5 h-1.5 rounded-full ml-auto shrink-0" style="background: var(--color-status-error)" title="Heartbeat dead"></div>
+                          {:else if agent.health === "alive"}
+                            <div class="w-1.5 h-1.5 rounded-full ml-auto shrink-0" style="background: var(--color-status-success)" title="Heartbeat alive"></div>
+                          {/if}
                         </div>
-                        {#if agent.current_task}
+                        {#if agent.last_mailbox && agent.last_mailbox.type === "blocker"}
+                          <p class="text-[10px] text-[var(--color-status-error)] truncate leading-tight font-medium">
+                            BLOCKER: {agent.last_mailbox.message}
+                          </p>
+                        {:else if agent.current_task}
                           <p class="text-[10px] text-[var(--color-text-tertiary)] truncate leading-tight">
                             {agent.current_task}
                           </p>

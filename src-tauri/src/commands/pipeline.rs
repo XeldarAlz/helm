@@ -3,7 +3,9 @@ use std::sync::Mutex;
 
 use tauri::State;
 
-use crate::models::pipeline::{AssetCounts, FileNode, OrchestrationState, PipelineState};
+use crate::models::pipeline::{
+    AgentHealth, AssetCounts, FileNode, MailboxMessage, OrchestrationState, PipelineState,
+};
 use crate::parser::progress::parse_progress;
 use crate::state::app_state::AppState;
 use crate::watcher::docs::DocsWatcher;
@@ -371,7 +373,43 @@ pub fn get_orchestration_state(
     let content = std::fs::read_to_string(progress_path)
         .map_err(|e| format!("Failed to read PROGRESS.md: {}", e))?;
 
-    Ok(parse_progress(&content))
+    let mut state = parse_progress(&content);
+
+    // Enrich agents with heartbeat and mailbox data
+    let claude_dir = root.join(".claude");
+    for agent in &mut state.agents {
+        // Read heartbeat
+        let heartbeat_path = claude_dir.join("heartbeat").join(format!("{}.json", agent.id));
+        if let Ok(hb_content) = std::fs::read_to_string(&heartbeat_path) {
+            if let Ok(hb) = serde_json::from_str::<serde_json::Value>(&hb_content) {
+                if let Some(ts) = hb.get("ts").and_then(|v| v.as_str()) {
+                    // Parse timestamp and check staleness
+                    if let Ok(hb_time) = chrono::DateTime::parse_from_rfc3339(ts) {
+                        let age = chrono::Utc::now().signed_duration_since(hb_time);
+                        agent.health = if age.num_minutes() > 20 {
+                            AgentHealth::Dead
+                        } else if age.num_minutes() > 10 {
+                            AgentHealth::Stale
+                        } else {
+                            AgentHealth::Alive
+                        };
+                    }
+                }
+            }
+        }
+
+        // Read last mailbox message
+        let mailbox_path = claude_dir.join("mailbox").join(format!("{}.jsonl", agent.id));
+        if let Ok(mb_content) = std::fs::read_to_string(&mailbox_path) {
+            if let Some(last_line) = mb_content.lines().filter(|l| !l.trim().is_empty()).last() {
+                if let Ok(msg) = serde_json::from_str::<MailboxMessage>(last_line) {
+                    agent.last_mailbox = Some(msg);
+                }
+            }
+        }
+    }
+
+    Ok(state)
 }
 
 #[tauri::command]

@@ -54,6 +54,24 @@
   const progressVariant = $derived(
     agent.status === "failed" ? "error" : agent.status === "passed" ? "success" : "default",
   );
+
+  const modelLabel = $derived(agent.model?.toUpperCase() ?? null);
+  const modelColor = $derived(
+    ({
+      haiku: "var(--color-text-tertiary)",
+      sonnet: "var(--color-status-info)",
+      opus: "var(--color-accent)",
+    })[agent.model ?? ""] ?? "var(--color-text-tertiary)",
+  );
+
+  const healthDot = $derived(
+    ({
+      alive: "var(--color-status-success)",
+      stale: "var(--color-status-warning)",
+      dead: "var(--color-status-error)",
+      unknown: null as string | null,
+    })[agent.health],
+  );
 </script>
 
 <div
@@ -78,7 +96,22 @@
           {$_(`orchestration.agents.${agent.status}`)}
         </Badge>
       </div>
-      <span class="text-[10px] text-[var(--color-text-tertiary)]">{agentLabel}</span>
+      <div class="flex items-center gap-1.5">
+        <span class="text-[10px] text-[var(--color-text-tertiary)]">{agentLabel}</span>
+        {#if modelLabel}
+          <span
+            class="text-[9px] font-bold px-1 py-0.5 rounded-[var(--radius-sm)] uppercase tracking-wider"
+            style="background: color-mix(in srgb, {modelColor} 15%, transparent); color: {modelColor}"
+          >{modelLabel}</span>
+        {/if}
+        {#if healthDot}
+          <div
+            class="w-1.5 h-1.5 rounded-full ml-auto shrink-0"
+            style="background: {healthDot}"
+            title="Health: {agent.health}"
+          ></div>
+        {/if}
+      </div>
     </div>
   </div>
 
@@ -90,6 +123,18 @@
   {:else}
     <div class="text-[var(--text-caption)] text-[var(--color-text-tertiary)] italic">
       No active task
+    </div>
+  {/if}
+
+  <!-- Last mailbox message -->
+  {#if agent.last_mailbox}
+    <div class="flex items-center gap-1.5 text-[10px] text-[var(--color-text-tertiary)]">
+      {#if agent.last_mailbox.type === "blocker"}
+        <span class="text-[var(--color-status-error)] font-medium">BLOCKER:</span>
+      {:else if agent.last_mailbox.type === "partial_result"}
+        <span class="text-[var(--color-status-success)]">&#10003;</span>
+      {/if}
+      <span class="truncate">{agent.last_mailbox.message}</span>
     </div>
   {/if}
 

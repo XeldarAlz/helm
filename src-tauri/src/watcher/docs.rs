@@ -50,9 +50,24 @@ impl DocsWatcher {
                             .map(|f| f.to_string_lossy().to_string())
                             .unwrap_or_default();
 
+                        // Check if this is a mailbox or heartbeat file change
+                        let path_str = path.to_string_lossy();
+                        if path_str.contains(".claude/mailbox/") || path_str.contains(".claude/heartbeat/") {
+                            // Trigger progress reload (mailbox/heartbeat data is read alongside PROGRESS.md)
+                            let _ = app_clone.emit(
+                                "progress-updated",
+                                DocChangedPayload {
+                                    name: filename.clone(),
+                                    path: path.to_string_lossy().to_string(),
+                                },
+                            );
+                            continue;
+                        }
+
                         let event_name = match filename.as_str() {
                             "PROGRESS.md" => "progress-updated",
                             "ACTIVITY_LOG.md" => "activity-logged",
+                            "EVENTS.jsonl" => "progress-updated",
                             "GDD.md" | "TDD.md" | "WORKFLOW.md" | "CLAUDE.md"
                             | "CATCH_UP.md" => "document-updated",
                             _ if path
@@ -110,7 +125,25 @@ impl DocsWatcher {
             watcher
                 .watch(&claude_dir, RecursiveMode::NonRecursive)
                 .map_err(|e| format!("Failed to watch .claude/: {}", e))?;
-            self.watched_paths.push(claude_dir);
+            self.watched_paths.push(claude_dir.clone());
+        }
+
+        // Watch .claude/mailbox/ for agent progress messages
+        let mailbox_dir = claude_dir.join("mailbox");
+        if mailbox_dir.exists() {
+            watcher
+                .watch(&mailbox_dir, RecursiveMode::NonRecursive)
+                .map_err(|e| format!("Failed to watch .claude/mailbox/: {}", e))?;
+            self.watched_paths.push(mailbox_dir);
+        }
+
+        // Watch .claude/heartbeat/ for agent health updates
+        let heartbeat_dir = claude_dir.join("heartbeat");
+        if heartbeat_dir.exists() {
+            watcher
+                .watch(&heartbeat_dir, RecursiveMode::NonRecursive)
+                .map_err(|e| format!("Failed to watch .claude/heartbeat/: {}", e))?;
+            self.watched_paths.push(heartbeat_dir);
         }
 
         // Watch Assets/Scripts/ if it exists (for code changes)

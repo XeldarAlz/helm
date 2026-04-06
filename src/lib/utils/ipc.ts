@@ -139,6 +139,15 @@ export interface AgentInfo {
   status: "idle" | "running" | "reviewing" | "passed" | "failed";
   current_task: string | null;
   progress: number;
+  model: string | null;
+  health: "unknown" | "alive" | "stale" | "dead";
+  last_mailbox: MailboxMessage | null;
+}
+
+export interface MailboxMessage {
+  ts: string;
+  type: string;
+  message: string;
 }
 
 export interface TaskInfo {

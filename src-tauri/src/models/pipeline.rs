@@ -198,6 +198,32 @@ pub struct AgentInfo {
     pub status: AgentStatus,
     pub current_task: Option<String>,
     pub progress: u32,
+    pub model: Option<String>,
+    pub health: AgentHealth,
+    pub last_mailbox: Option<MailboxMessage>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AgentHealth {
+    Unknown,
+    Alive,
+    Stale,
+    Dead,
+}
+
+impl Default for AgentHealth {
+    fn default() -> Self {
+        AgentHealth::Unknown
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MailboxMessage {
+    pub ts: String,
+    #[serde(rename = "type")]
+    pub msg_type: String,
+    pub message: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

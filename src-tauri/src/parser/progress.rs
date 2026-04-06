@@ -1,5 +1,5 @@
 use crate::models::pipeline::{
-    AgentInfo, AgentStatus, AgentType, HookResult, HookStatus, LogEntry, LogLevel,
+    AgentHealth, AgentInfo, AgentStatus, AgentType, HookResult, HookStatus, LogEntry, LogLevel,
     OrchestrationState, OrchestrationStatus, PhaseInfo, PhaseStatus, TaskInfo, TaskStatus,
 };
 
@@ -93,6 +93,26 @@ pub fn parse_progress(content: &str) -> OrchestrationState {
         i += 1;
     }
 
+    // Extract model info from log entries (format: "... model: opus" or "... (complexity: XL, model: opus)")
+    for entry in &state.log {
+        if let Some(model_pos) = entry.message.find("model: ") {
+            let model_str = &entry.message[model_pos + 7..];
+            let model = model_str
+                .split(|c: char| c == ')' || c == ',' || c.is_whitespace())
+                .next()
+                .unwrap_or("")
+                .to_string();
+            if !model.is_empty() {
+                // Match to agent by source (e.g., "agent:coder-1")
+                if let Some(agent_id) = entry.source.strip_prefix("agent:") {
+                    if let Some(agent) = state.agents.iter_mut().find(|a| a.id == agent_id) {
+                        agent.model = Some(model);
+                    }
+                }
+            }
+        }
+    }
+
     state
 }
 
@@ -170,6 +190,9 @@ fn parse_agents_table(lines: &[&str], i: &mut usize) -> Vec<AgentInfo> {
                 } else {
                     0
                 },
+                model: None,
+                health: AgentHealth::Unknown,
+                last_mailbox: None,
             })
         })
         .collect()
