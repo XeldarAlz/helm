@@ -1,0 +1,11 @@
+class InventorySystem
+IInventorySystem
+IInventoryConfig
+IInventoryEvents
+private readonly
+Dictionary<int
+GetItemCount
+AddItem
+RemoveItem
+HasItem
+Clear
