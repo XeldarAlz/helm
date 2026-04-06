@@ -29,10 +29,12 @@ Analyze the WORKFLOW.md and produce an execution preview:
 - Agent assignments:
   | Batch | Task | Agent Type | Model | Files Produced |
   |-------|------|-----------|-------|----------------|
-  | 1     | P1.T1 | coder | sonnet | file1.cs, file2.cs |
-  | 1     | P1.T2 | coder | sonnet | file3.cs |
-  | 1     | P1.T3 | coder | sonnet | file4.cs |
+  | 1     | P1.T1 (M) | coder | sonnet | file1.cs, file2.cs |
+  | 1     | P1.T2 (S) | coder | haiku | file3.cs |
+  | 1     | P1.T3 (XL) | coder | opus | file4.cs |
   | R     | Review batch 1 | reviewer | opus | — |
+
+  **Model selection** uses the routing table: reviewer=always opus, XL=opus, S coder/tester=haiku, else=sonnet.
   ...
 
 #### Phase 2: [Name]
