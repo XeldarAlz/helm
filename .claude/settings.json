@@ -154,6 +154,44 @@
           }
         ]
       }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/pre-compact-save.sh",
+            "timeout": 10000,
+            "statusMessage": "Saving state before compaction..."
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/prevent-premature-stop.sh",
+            "timeout": 5000,
+            "statusMessage": "Checking orchestration state..."
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/session-start-detect.sh",
+            "timeout": 3000
+          }
+        ]
+      }
     ]
   }
 }
