@@ -99,6 +99,7 @@ Agents report progress via three mechanisms:
 - `/catch-up` — Generate a human-readable codebase comprehension guide (`docs/CATCH_UP.md`)
 - `/benchmark` — Run agent benchmarks to regression-test prompt/template changes (see `benchmarks/README.md`)
 - `/learn` — Extract reusable project-specific patterns into `.claude/skills/learned/`
+- `/clean-slop` — Remove AI-generated bloat (dead code, duplication, needless abstractions) with test-locked regression safety
 
 All commands with prerequisites will check for required documents before running and tell you what's missing.
 
@@ -127,6 +128,24 @@ All commands with prerequisites will check for required documents before running
 | `checkpoint-nudge` | Reminds agents to update their checkpoint file after many writes |
 
 Hooks returning exit code 2 block the agent. All others are warnings (exit 0).
+
+### PreCompact — State Preservation (run before context compaction)
+
+| Hook | Behavior |
+|------|----------|
+| `pre-compact-save` | Consolidates agent checkpoints, mailbox, and progress into `.claude/pre-compact-state.md` |
+
+### Stop — Orchestration Protection (run when Claude tries to stop)
+
+| Hook | Behavior |
+|------|----------|
+| `prevent-premature-stop` | **BLOCKS** stop if `.claude/orchestration-active.json` exists and is <2h old |
+
+### SessionStart — Context Injection (run on session start)
+
+| Hook | Behavior |
+|------|----------|
+| `session-start-detect` | Injects notification if interrupted orchestration detected in `docs/PROGRESS.md` |
 
 ## Document Outputs
 
