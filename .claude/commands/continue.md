@@ -60,7 +60,11 @@ Ready to resume?
 ```
 
 ### Step 4: Continue Execution
-On user confirmation, continue with the orchestration protocol:
+On user confirmation:
+- **Re-activate orchestration marker** so the stop-prevention hook protects this run:
+  ```bash
+  echo '{"started":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","phase":'$CURRENT_PHASE',"phaseName":"'"$PHASE_NAME"'"}' > .claude/orchestration-active.json
+  ```
 - Spawn agents for the current phase's remaining tasks
 - Follow the same parallel dispatch, review gate, and phase gate process
 - Continue updating PROGRESS.md

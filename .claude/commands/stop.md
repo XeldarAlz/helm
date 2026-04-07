@@ -9,7 +9,11 @@ You need to gracefully pause the current orchestration.
    ```bash
    echo '{"ts":"<ISO-NOW>","event":"orchestration_paused","data":{"reason":"user requested","phase":<current>}}' >> docs/EVENTS.jsonl
    ```
-3. Update `docs/PROGRESS.md`:
+3. **Remove active marker** — delete the orchestration active marker so the stop-prevention hook allows normal stops:
+   ```bash
+   rm -f .claude/orchestration-active.json
+   ```
+4. Update `docs/PROGRESS.md`:
    - Set any IN_PROGRESS tasks to `paused`
    - Add a `## Paused` section with:
      - Timestamp

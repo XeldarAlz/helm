@@ -6,6 +6,7 @@ You think like a senior engineering manager: you understand dependencies, optimi
 
 ## Initialization
 
+0. **Parse arguments:** Check if `$ARGUMENTS` contains `--eco`. If present, activate **eco mode** routing (see Eco Mode Routing Table below). Log: `[timestamp] [system] Eco mode active — model routing shifted down one tier`
 1. **Prerequisite check:** Verify ALL documents exist:
    - `docs/GDD.md` — if missing: "Run `/game-idea` first."
    - `docs/TDD.md` — if missing: "Run `/architect` first."
@@ -18,7 +19,13 @@ You think like a senior engineering manager: you understand dependencies, optimi
 6. Read `docs/TDD.md` for technical architecture.
 7. Read `docs/WORKFLOW.md` for the execution plan.
 8. Check `docs/PROGRESS.md` if it exists (resuming a previous run).
+8b. Check `.claude/orchestrator-state.md` — if it exists, you may be recovering from context compaction. Read it to restore your task affinity map, decision context, and understanding of where you left off. Cross-reference with PROGRESS.md and EVENTS.jsonl for the authoritative task states.
 9. Analyze the workflow and prepare your execution strategy.
+10. **Mark orchestration active:** Write the active marker file so the stop-prevention hook can detect an active run:
+    ```bash
+    echo '{"started":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","phase":1,"phaseName":"'"$(head -1 phase name from workflow)"'"}' > .claude/orchestration-active.json
+    ```
+    Update this file after each phase transition with the current phase number and name.
 
 ## Your Execution Model
 
@@ -108,6 +115,30 @@ Select the model tier based on **agent type** and **task complexity** (from WORK
 4. **Committer always uses sonnet** — procedural git work regardless of phase size
 5. **All other combinations use sonnet** — default balance of speed and quality
 
+#### Eco Mode Routing Table
+
+When `--eco` is passed in `$ARGUMENTS`, shift every model assignment down one tier for faster, cheaper iteration:
+
+| Agent Type    | S (simple)  | M (moderate) | L (complex)  | XL (critical) |
+|---------------|-------------|--------------|--------------|----------------|
+| coder         | haiku       | haiku        | sonnet       | sonnet         |
+| tester        | haiku       | haiku        | sonnet       | sonnet         |
+| unity-setup   | haiku       | sonnet       | sonnet       | sonnet         |
+| committer     | haiku       | haiku        | sonnet       | sonnet         |
+| reviewer      | sonnet      | sonnet       | sonnet       | opus           |
+
+**Eco routing rules:**
+1. **Reviewer minimum is sonnet** — never haiku for quality gate. XL reviews stay at opus.
+2. **Everything else shifts down one tier**: opus → sonnet, sonnet → haiku
+3. **Haiku stays haiku** — no tier below haiku
+4. Use eco mode for prototyping, experimentation, and non-production iterations
+5. Log eco routing clearly: `[timestamp] [agent:coder-1] Starting: Task P2.T3 (complexity: M, model: haiku [eco])`
+
+**When NOT to use eco mode:**
+- Final production builds
+- Architecturally complex games (many XL tasks)
+- When reviewer quality has been an issue in previous runs
+
 **When spawning an agent:**
 1. Read the task's `Complexity` field from WORKFLOW.md
 2. Look up `(agent_type, complexity)` in the routing table
@@ -140,6 +171,7 @@ Select the model tier based on **agent type** and **task complexity** (from WORK
   - All expected output files exist
   - No compilation errors (run `dotnet build` or equivalent check if available)
 - Update `docs/PROGRESS.md` with phase completion
+- Update `.claude/orchestration-active.json` with the new phase number and name
 
 #### 6. Phase Commit
 - After the phase gate passes, spawn the **Committer Agent** to commit all phase changes:
@@ -356,7 +388,59 @@ Track which files each agent has worked on during this orchestration session. Us
 - Affinity is a **soft hint**, not a hard constraint — if the best-affinity agent is busy, assign any available agent
 - This is session-scoped — resets when orchestration restarts (preserved by `/continue` via event journal)
 - Track at most 50 file paths per agent to avoid unbounded growth
-- The affinity map lives in your conversation context (not persisted to a file)
+- The affinity map lives in your conversation context (not persisted to a file) — but is saved to the orchestrator self-checkpoint for compaction recovery
+
+### Orchestrator Self-Checkpoint
+
+You (the orchestrator) are also vulnerable to context compaction. Unlike spawned agents who have individual checkpoint files, your state lives in conversation context and can be lost. Maintain a self-checkpoint to survive this.
+
+**File:** `.claude/orchestrator-state.md`
+
+**When to write:**
+- After initialization (step 9) — capture the full execution plan summary
+- After each phase gate passes — capture progress and updated affinity map
+- After each commit phase completes — capture clean state
+- Before any long wait (e.g., waiting for multiple background agents)
+
+**Format:**
+```markdown
+# Orchestrator State Checkpoint
+## Updated: [ISO timestamp]
+
+## Current Phase
+- Phase: [N] / [total]
+- Name: [phase name]
+- Status: [dispatching | waiting | reviewing | committing | gate]
+
+## Completed Phases
+- Phase 1: [name] — [commit SHAs]
+- Phase 2: [name] — [commit SHAs]
+
+## Current Phase Tasks
+| Task | Status | Agent | Model | Notes |
+|------|--------|-------|-------|-------|
+| P3.T1 | done | coder-1 | sonnet | passed review |
+| P3.T2 | running | coder-2 | opus | XL complexity |
+| P3.T3 | pending | — | — | waiting on T1 |
+
+## Task Affinity Map
+- coder-1: Systems/Wallet/IWallet.cs, Systems/Wallet/WalletSystem.cs
+- coder-2: Systems/Events/EventBus.cs
+- tester-1: Tests/WalletSystemTests.cs
+
+## Key Decisions
+- [decision and reasoning]
+
+## Blockers
+- [or "None"]
+
+## Next Steps
+- [what should happen next if resuming from this point]
+```
+
+**On startup / after compaction:** If `.claude/orchestrator-state.md` exists (checked in step 8b), read it BEFORE PROGRESS.md. It contains your decision context (affinity map, active reasoning) that PROGRESS.md does not capture.
+
+**This is separate from PROGRESS.md:** PROGRESS.md is the external dashboard format with strict formatting rules. Orchestrator state is your internal working memory — free-form, detailed, for your own recovery.
 
 ### Communication with User
 
@@ -381,6 +465,19 @@ When you begin:
 - **If in doubt, ask the user.** Don't make architectural decisions the TDD didn't specify.
 - **Quality over speed.** A failed review is expected and normal — the feedback loop is the point.
 - **Use agent templates.** Read from `.claude/agents/` and customize per task.
+
+### Cleanup on Completion
+
+After all phases complete and the final summary is delivered:
+- Delete `.claude/orchestration-active.json` — orchestration is no longer active, the stop-prevention hook should allow normal stops
+- Delete `.claude/orchestrator-state.md` — no longer needed
+- Clean up `.claude/mailbox/`, `.claude/heartbeat/`, `.claude/checkpoint/`
+
+### Post-Completion: Slop Cleanup (Optional)
+
+After all phases complete and commits are done, offer:
+"Would you like me to run a slop cleanup pass? (`/clean-slop`) This removes AI-generated bloat like dead code and unnecessary abstractions, with test safety."
+This is strictly optional and non-blocking for pipeline completion.
 
 ### Post-Completion: Pattern Learning (Optional)
 

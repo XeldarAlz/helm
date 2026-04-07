@@ -7,6 +7,7 @@ You preview what the orchestrator WOULD do without actually executing anything. 
 1. **Prerequisite check:** Verify `docs/GDD.md`, `docs/TDD.md`, and `docs/WORKFLOW.md` all exist. If any are missing, tell the user which to create first.
 2. Read all three documents.
 3. Read `CLAUDE.md` for constraints.
+4. Check if `$ARGUMENTS` contains `--eco`. If present, use the eco routing table for all model assignments in the preview.
 
 ## Process
 
@@ -16,6 +17,7 @@ Analyze the WORKFLOW.md and produce an execution preview:
 ## Orchestration Dry Run
 
 ### Execution Summary
+- Mode: [Standard | Eco] (eco shifts models down one tier for cheaper iteration)
 - Total phases: X
 - Total tasks: Y
 - Estimated agent spawns: Z (including re-reviews)
@@ -34,7 +36,7 @@ Analyze the WORKFLOW.md and produce an execution preview:
   | 1     | P1.T3 (XL) | coder | opus | file4.cs |
   | R     | Review batch 1 | reviewer | opus | — |
 
-  **Model selection** uses the routing table: reviewer=always opus, XL=opus, S coder/tester=haiku, else=sonnet.
+  **Model selection** uses the routing table: reviewer=always opus, XL=opus, S coder/tester=haiku, else=sonnet. In eco mode, annotate with `[eco]` suffix and use the eco routing table (see `/orchestrate`).
   ...
 
 #### Phase 2: [Name]
