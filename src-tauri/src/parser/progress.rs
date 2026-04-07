@@ -113,6 +113,15 @@ pub fn parse_progress(content: &str) -> OrchestrationState {
         }
     }
 
+    // Detect eco mode from log entries
+    state.eco_mode = state.log.iter().any(|entry| {
+        entry.message.contains("[eco]")
+            || entry
+                .message
+                .to_lowercase()
+                .contains("eco mode active")
+    });
+
     state
 }
 
@@ -313,6 +322,316 @@ fn parse_log_line(line: &str) -> Option<LogEntry> {
         source: source.to_string(),
         message: message.to_string(),
     })
+}
+
+/// Parse a `docs/EVENTS.jsonl` file to derive orchestration state when
+/// PROGRESS.md is missing or empty.  Each line is a JSON object with
+/// `ts`, `event`, and `data` fields.
+pub fn parse_events_jsonl(content: &str) -> OrchestrationState {
+    let mut state = OrchestrationState::default();
+
+    for line in content.lines() {
+        let line = line.trim();
+        if line.is_empty() {
+            continue;
+        }
+
+        let v: serde_json::Value = match serde_json::from_str(line) {
+            Ok(v) => v,
+            Err(_) => continue,
+        };
+
+        let ts = v
+            .get("ts")
+            .and_then(|t| t.as_str())
+            .unwrap_or("")
+            .to_string();
+        let event_type = match v.get("event").and_then(|e| e.as_str()) {
+            Some(e) => e,
+            None => continue,
+        };
+        let data = v.get("data");
+
+        match event_type {
+            "orchestration_started" => {
+                state.status = OrchestrationStatus::Running;
+                if state.started_at.is_none() && !ts.is_empty() {
+                    state.started_at = Some(ts.clone());
+                }
+                let total = data
+                    .and_then(|d| d.get("phases"))
+                    .and_then(|p| p.as_u64())
+                    .unwrap_or(0) as u32;
+                if total > 0 {
+                    state.total_phases = total;
+                }
+                state.log.push(LogEntry {
+                    timestamp: ts,
+                    level: LogLevel::System,
+                    source: "system".to_string(),
+                    message: "Orchestration started".to_string(),
+                });
+            }
+            "agent_spawned" => {
+                let agent = data
+                    .and_then(|d| d.get("agent"))
+                    .and_then(|a| a.as_str())
+                    .unwrap_or("unknown");
+                let task = data
+                    .and_then(|d| d.get("task"))
+                    .and_then(|t| t.as_str())
+                    .unwrap_or("");
+                let model = data
+                    .and_then(|d| d.get("model"))
+                    .and_then(|m| m.as_str())
+                    .unwrap_or("");
+                let agent_type_str = data
+                    .and_then(|d| d.get("type"))
+                    .and_then(|t| t.as_str())
+                    .unwrap_or("coder");
+                let phase = data
+                    .and_then(|d| d.get("phase"))
+                    .and_then(|p| p.as_u64())
+                    .unwrap_or(0) as u32;
+
+                if phase > 0 {
+                    state.current_phase = phase;
+                }
+
+                // Add or update agent in the agents list
+                if let Some(atype) = AgentType::from_str(agent_type_str) {
+                    if !state.agents.iter().any(|a| a.id == agent) {
+                        state.agents.push(AgentInfo {
+                            id: agent.to_string(),
+                            agent_type: atype,
+                            status: AgentStatus::Running,
+                            current_task: Some(task.to_string()),
+                            progress: 0,
+                            model: if model.is_empty() {
+                                None
+                            } else {
+                                Some(model.to_string())
+                            },
+                            health: AgentHealth::Unknown,
+                            last_mailbox: None,
+                        });
+                    } else if let Some(a) = state.agents.iter_mut().find(|a| a.id == agent) {
+                        a.status = AgentStatus::Running;
+                        a.current_task = Some(task.to_string());
+                    }
+                }
+
+                state.log.push(LogEntry {
+                    timestamp: ts,
+                    level: LogLevel::Agent,
+                    source: format!("agent:{}", agent),
+                    message: format!(
+                        "Spawned for task {}{}",
+                        task,
+                        if model.is_empty() {
+                            String::new()
+                        } else {
+                            format!(" (model: {})", model)
+                        }
+                    ),
+                });
+            }
+            "agent_completed" => {
+                let agent = data
+                    .and_then(|d| d.get("agent"))
+                    .and_then(|a| a.as_str())
+                    .unwrap_or("unknown");
+                let task = data
+                    .and_then(|d| d.get("task"))
+                    .and_then(|t| t.as_str())
+                    .unwrap_or("");
+
+                if let Some(a) = state.agents.iter_mut().find(|a| a.id == agent) {
+                    a.status = AgentStatus::Passed;
+                }
+
+                state.log.push(LogEntry {
+                    timestamp: ts,
+                    level: LogLevel::Agent,
+                    source: format!("agent:{}", agent),
+                    message: format!("Completed task {}", task),
+                });
+            }
+            "agent_failed" => {
+                let agent = data
+                    .and_then(|d| d.get("agent"))
+                    .and_then(|a| a.as_str())
+                    .unwrap_or("unknown");
+                let reason = data
+                    .and_then(|d| d.get("reason"))
+                    .and_then(|r| r.as_str())
+                    .unwrap_or("");
+
+                if let Some(a) = state.agents.iter_mut().find(|a| a.id == agent) {
+                    a.status = AgentStatus::Failed;
+                }
+
+                state.log.push(LogEntry {
+                    timestamp: ts,
+                    level: LogLevel::Error,
+                    source: format!("agent:{}", agent),
+                    message: format!("Failed: {}", reason),
+                });
+            }
+            "review_verdict" => {
+                let verdict = data
+                    .and_then(|d| d.get("verdict"))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("");
+                let reviewer = data
+                    .and_then(|d| d.get("reviewer"))
+                    .and_then(|r| r.as_str())
+                    .unwrap_or("reviewer");
+
+                state.log.push(LogEntry {
+                    timestamp: ts,
+                    level: LogLevel::Agent,
+                    source: format!("agent:{}", reviewer),
+                    message: format!("Review verdict: {}", verdict),
+                });
+            }
+            "phase_transition" => {
+                let to = data
+                    .and_then(|d| d.get("to"))
+                    .and_then(|t| t.as_u64())
+                    .unwrap_or(0) as u32;
+                let name = data
+                    .and_then(|d| d.get("name"))
+                    .and_then(|n| n.as_str())
+                    .unwrap_or("");
+
+                if to > 0 {
+                    state.current_phase = to;
+                    state.phase_name = name.to_string();
+                }
+
+                state.log.push(LogEntry {
+                    timestamp: ts,
+                    level: LogLevel::System,
+                    source: "system".to_string(),
+                    message: format!("Phase {}: {}", to, name),
+                });
+            }
+            "commit_created" => {
+                let sha = data
+                    .and_then(|d| d.get("sha"))
+                    .and_then(|s| s.as_str())
+                    .unwrap_or("");
+                let message = data
+                    .and_then(|d| d.get("message"))
+                    .and_then(|m| m.as_str())
+                    .unwrap_or("");
+
+                state.log.push(LogEntry {
+                    timestamp: ts,
+                    level: LogLevel::System,
+                    source: "system".to_string(),
+                    message: format!("Commit {}: {}", &sha[..sha.len().min(7)], message),
+                });
+            }
+            "orchestration_paused" => {
+                state.status = OrchestrationStatus::Paused;
+                state.log.push(LogEntry {
+                    timestamp: ts,
+                    level: LogLevel::System,
+                    source: "system".to_string(),
+                    message: "Orchestration paused".to_string(),
+                });
+            }
+            "orchestration_completed" => {
+                state.status = OrchestrationStatus::Completed;
+                state.log.push(LogEntry {
+                    timestamp: ts,
+                    level: LogLevel::System,
+                    source: "system".to_string(),
+                    message: "Orchestration completed".to_string(),
+                });
+            }
+            "orchestration_failed" => {
+                state.status = OrchestrationStatus::Failed;
+                let reason = data
+                    .and_then(|d| d.get("reason"))
+                    .and_then(|r| r.as_str())
+                    .unwrap_or("Unknown error");
+                state.log.push(LogEntry {
+                    timestamp: ts,
+                    level: LogLevel::Error,
+                    source: "system".to_string(),
+                    message: format!("Orchestration failed: {}", reason),
+                });
+            }
+            "task_status" => {
+                let task = data
+                    .and_then(|d| d.get("task"))
+                    .and_then(|t| t.as_str())
+                    .unwrap_or("");
+                let to = data
+                    .and_then(|d| d.get("to"))
+                    .and_then(|t| t.as_str())
+                    .unwrap_or("");
+                let agent = data
+                    .and_then(|d| d.get("agent"))
+                    .and_then(|a| a.as_str())
+                    .unwrap_or("");
+
+                state.log.push(LogEntry {
+                    timestamp: ts,
+                    level: LogLevel::Agent,
+                    source: if agent.is_empty() {
+                        "system".to_string()
+                    } else {
+                        format!("agent:{}", agent)
+                    },
+                    message: format!("Task {} → {}", task, to),
+                });
+            }
+            "error" | "blocker" => {
+                let message = data
+                    .and_then(|d| d.get("message"))
+                    .and_then(|m| m.as_str())
+                    .unwrap_or("");
+                let agent = data
+                    .and_then(|d| d.get("agent"))
+                    .and_then(|a| a.as_str())
+                    .unwrap_or("system");
+
+                state.log.push(LogEntry {
+                    timestamp: ts,
+                    level: LogLevel::Error,
+                    source: if agent == "system" {
+                        "system".to_string()
+                    } else {
+                        format!("agent:{}", agent)
+                    },
+                    message: format!(
+                        "{}{}",
+                        if event_type == "blocker" {
+                            "BLOCKER: "
+                        } else {
+                            ""
+                        },
+                        message
+                    ),
+                });
+            }
+            _ => {
+                // Unknown event type — still add to log for visibility
+                state.log.push(LogEntry {
+                    timestamp: ts,
+                    level: LogLevel::System,
+                    source: "system".to_string(),
+                    message: format!("[{}] {:?}", event_type, data),
+                });
+            }
+        }
+    }
+
+    state
 }
 
 #[cfg(test)]

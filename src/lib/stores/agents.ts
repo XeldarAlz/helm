@@ -22,6 +22,10 @@ export const orchestrationState = writable<OrchestrationState>({
   tasks: [],
   hooks: [],
   log: [],
+  eco_mode: false,
+  stop_protected: false,
+  last_compact_save: null,
+  orchestrator_checkpoint: null,
 });
 
 // Derived stores for convenient access
@@ -37,6 +41,9 @@ export const orchProgress = derived(orchestrationState, ($s) => {
   const donePhases = $s.phases.filter((p) => p.status === "done").length;
   return Math.round((donePhases / $s.total_phases) * 100);
 });
+
+export const orchEcoMode = derived(orchestrationState, ($s) => $s.eco_mode);
+export const orchStopProtected = derived(orchestrationState, ($s) => $s.stop_protected);
 
 export const isOrchestrating = derived(
   orchestrationState,
@@ -133,6 +140,113 @@ export async function startOrchestrationListeners(): Promise<void> {
       },
     ),
   );
+
+  // Session text output — parse for orchestration patterns in real time.
+  // This provides immediate feedback before PROGRESS.md / EVENTS.jsonl
+  // are written and polled.
+  let textBuffer = "";
+  unlisteners.push(
+    await listen<{ session_id: string; text: string }>(
+      "session:output",
+      (event) => {
+        textBuffer += event.payload.text;
+
+        // Process complete lines
+        let newlineIdx: number;
+        while ((newlineIdx = textBuffer.indexOf("\n")) !== -1) {
+          const line = textBuffer.slice(0, newlineIdx).trim();
+          textBuffer = textBuffer.slice(newlineIdx + 1);
+
+          if (!line) continue;
+
+          const orchEvent = parseOrchestrationPattern(line);
+          if (orchEvent) {
+            orchestrationState.update((s) => {
+              const updated = { ...s };
+
+              // Set status to running on first detected event
+              if (updated.status === "idle") {
+                updated.status = "running";
+              }
+
+              updated.log = [
+                ...updated.log,
+                {
+                  timestamp: new Date().toISOString(),
+                  level: orchEvent.level,
+                  source: orchEvent.source,
+                  message: orchEvent.message,
+                },
+              ];
+              return updated;
+            });
+          }
+        }
+      },
+    ),
+  );
+}
+
+// ── Orchestration pattern detection from session text ────────────────────────
+
+interface OrchPattern {
+  level: "system" | "agent" | "hook" | "error";
+  source: string;
+  message: string;
+}
+
+// Matches: "Launching coder-1 for P1.T1 — description (complexity: M, model: sonnet)"
+const LAUNCH_RE = /^(?:Launching|Spawning)\s+([\w-]+)\s+for\s+(P\d+\.T\d+)/i;
+// Matches: "Phase 1 coder agent completed" or "coder-1 completed successfully"
+const COMPLETE_RE = /^(?:Phase\s+\d+\s+)?(\w[\w-]*)\s+(?:agent\s+)?completed/i;
+// Matches: "Phase 1 PASSED review"
+const REVIEW_RE = /^Phase\s+(\d+)\s+(PASSED|FAILED)\s+review/i;
+// Matches: "moving to Phase 2" or "Phase 2: Name — starting"
+const PHASE_RE = /(?:moving\s+to\s+Phase|starting\s+Phase|Phase)\s+(\d+)/i;
+
+function parseOrchestrationPattern(line: string): OrchPattern | null {
+  let m: RegExpMatchArray | null;
+
+  m = line.match(LAUNCH_RE);
+  if (m) {
+    return {
+      level: "agent",
+      source: `agent:${m[1]}`,
+      message: `Spawned for ${m[2]}`,
+    };
+  }
+
+  m = line.match(COMPLETE_RE);
+  if (m) {
+    return {
+      level: "agent",
+      source: `agent:${m[1]}`,
+      message: `Completed successfully`,
+    };
+  }
+
+  m = line.match(REVIEW_RE);
+  if (m) {
+    return {
+      level: "agent",
+      source: "agent:reviewer",
+      message: `Phase ${m[1]} review: ${m[2]}`,
+    };
+  }
+
+  // Phase transition — only match if it looks like a transition announcement
+  if (/(?:moving to|starting|beginning|entering)\s+Phase/i.test(line)) {
+    m = line.match(PHASE_RE);
+    if (m) {
+      return {
+        level: "system",
+        source: "system",
+        message: `Transitioning to Phase ${m[1]}`,
+      };
+    }
+  }
+
+  return null;
 }
 
 export function stopOrchestrationListeners(): void {

@@ -13,6 +13,8 @@
     orchHooks,
     filteredLog,
     orchProgress,
+    orchEcoMode,
+    orchStopProtected,
     startOrchestrationListeners,
     stopOrchestrationListeners,
   } from "$lib/stores/agents";
@@ -37,6 +39,7 @@
     Zap,
     CheckCircle2,
     Circle,
+    Brain,
   } from "lucide-svelte";
 
   let mounted = $state(false);
@@ -49,7 +52,29 @@
   async function loadState() {
     try {
       const state = await getOrchestrationState();
-      orchestrationState.set(state);
+      orchestrationState.update((current) => {
+        // If the backend returned real data, use it.  But preserve any
+        // real-time log entries added by session:output pattern detection
+        // that the backend doesn't know about yet.
+        const backendKeys = new Set(
+          state.log.map((e) => `${e.timestamp}:${e.message}`),
+        );
+        const extraEntries = current.log.filter(
+          (e) => !backendKeys.has(`${e.timestamp}:${e.message}`),
+        );
+        return {
+          ...state,
+          log: [...state.log, ...extraEntries].sort((a, b) =>
+            a.timestamp.localeCompare(b.timestamp),
+          ),
+          // Keep "running" status if frontend detected it but backend
+          // still returns "idle" (files not written yet)
+          status:
+            state.status === "idle" && current.status === "running"
+              ? "running"
+              : state.status,
+        };
+      });
     } catch {
       // PROGRESS.md may not exist yet
     }
@@ -96,7 +121,7 @@
   });
 
   const hasData = $derived(
-    $orchPhases.length > 0 || $orchAgents.length > 0 || $orchTasks.length > 0,
+    $orchPhases.length > 0 || $orchAgents.length > 0 || $orchTasks.length > 0 || $filteredLog.length > 0,
   );
 
   // ── Derived stats ─────────────────────────────────────────────────────────
@@ -154,12 +179,34 @@
 <div class="flex flex-col h-full">
   <TopBar title={$_("orchestration.title")}>
     {#snippet actions()}
-      <OrchControls status={$orchStatus} />
+      <OrchControls status={$orchStatus} ecoMode={$orchEcoMode} stopProtected={$orchStopProtected} />
     {/snippet}
   </TopBar>
 
   <div class="flex-1 overflow-hidden min-h-0">
-    {#if !hasData && $orchStatus === "idle" && hasActiveOrchSession}
+    {#if !hasData && $orchStatus === "idle" && !hasActiveOrchSession}
+      <!-- Empty state — no orchestration running -->
+      <div class="flex flex-col items-center justify-center h-full gap-4 p-8">
+        {#if mounted}
+          <div in:fadeScale={{ duration: 300 }}>
+            <div
+              class="flex items-center justify-center w-16 h-16 rounded-2xl mb-2
+                bg-[var(--color-accent)]/10 text-[var(--color-accent)]"
+            >
+              <Activity size={32} />
+            </div>
+          </div>
+          <div class="text-center" in:fadeScale={{ duration: 300, delay: 100 }}>
+            <h2 class="text-[var(--text-title)] font-semibold text-[var(--color-text-primary)] mb-1">
+              {$_("orchestration.title")}
+            </h2>
+            <p class="text-[var(--text-body)] text-[var(--color-text-secondary)] max-w-md">
+              Start the Building phase from the pipeline bar to monitor multi-agent execution in real time.
+            </p>
+          </div>
+        {/if}
+      </div>
+    {:else if !hasData && hasActiveOrchSession}
       <!-- Initializing state -->
       <div class="flex flex-col items-center justify-center h-full gap-4 p-8">
         {#if mounted}
@@ -177,28 +224,6 @@
             </h2>
             <p class="text-[var(--text-body)] text-[var(--color-text-secondary)] max-w-md">
               An orchestration session is active. Waiting for the agent to begin writing progress data...
-            </p>
-          </div>
-        {/if}
-      </div>
-    {:else if !hasData && $orchStatus === "idle"}
-      <!-- Empty state -->
-      <div class="flex flex-col items-center justify-center h-full gap-4 p-8">
-        {#if mounted}
-          <div in:fadeScale={{ duration: 300 }}>
-            <div
-              class="flex items-center justify-center w-16 h-16 rounded-2xl mb-2
-                bg-[var(--color-accent)]/10 text-[var(--color-accent)]"
-            >
-              <Activity size={32} />
-            </div>
-          </div>
-          <div class="text-center" in:fadeScale={{ duration: 300, delay: 100 }}>
-            <h2 class="text-[var(--text-title)] font-semibold text-[var(--color-text-primary)] mb-1">
-              {$_("orchestration.title")}
-            </h2>
-            <p class="text-[var(--text-body)] text-[var(--color-text-secondary)] max-w-md">
-              Start the Building phase from the pipeline bar to monitor multi-agent execution in real time.
             </p>
           </div>
         {/if}
@@ -247,6 +272,30 @@
                 <div class="ml-auto w-2 h-2 rounded-full bg-[var(--color-status-success)] animate-pulse"></div>
               {/if}
             </div>
+
+            <!-- Context Health -->
+            {#if $orchestrationState.orchestrator_checkpoint || $orchestrationState.last_compact_save}
+              <Panel class="p-3 space-y-2">
+                <div class="flex items-center gap-1.5 text-[var(--text-caption)] text-[var(--color-text-secondary)]">
+                  <Brain size={12} />
+                  {$_("orchestration.contextHealth.title")}
+                </div>
+                <div class="space-y-1 text-[var(--text-caption)]">
+                  <div class="flex justify-between">
+                    <span class="text-[var(--color-text-tertiary)]">{$_("orchestration.contextHealth.checkpoint")}</span>
+                    <span class="text-[var(--color-text-secondary)] font-mono text-[10px]">
+                      {$orchestrationState.orchestrator_checkpoint ?? $_("orchestration.contextHealth.noCheckpoint")}
+                    </span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-[var(--color-text-tertiary)]">{$_("orchestration.contextHealth.compactSave")}</span>
+                    <span class="text-[var(--color-text-secondary)] font-mono text-[10px]">
+                      {$orchestrationState.last_compact_save ?? $_("orchestration.contextHealth.noSave")}
+                    </span>
+                  </div>
+                </div>
+              </Panel>
+            {/if}
 
             <!-- Task progress -->
             {#if taskCounts.total > 0}

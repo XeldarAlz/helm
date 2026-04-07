@@ -10,6 +10,7 @@ use std::path::PathBuf;
 use commands::pipeline::WatcherState;
 use commands::session::ProcessMgr;
 use commands::settings::load_settings_from_disk;
+use models::pipeline::OrchLiveLog;
 use process::manager::ProcessManager;
 use state::app_state::AppState;
 use tauri::Manager;
@@ -33,6 +34,7 @@ pub fn run() {
         .manage(AppState::new())
         .manage(ProcessMgr::new(ProcessManager::new()))
         .manage(WatcherState(std::sync::Mutex::new(DocsWatcher::new())))
+        .manage(OrchLiveLog::new())
         .setup(|app| {
             let settings = load_settings_from_disk(&app.handle());
             let state = app.state::<AppState>();
@@ -72,6 +74,7 @@ pub fn run() {
             commands::git::get_git_branches,
             commands::git::get_git_status,
             commands::git::get_git_diff,
+            commands::git::get_commit_trailers,
         ])
         .build(tauri::generate_context!())
         .expect("error while building Helm");

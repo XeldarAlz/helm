@@ -9,8 +9,12 @@ use tokio::sync::Mutex as AsyncMutex;
 use tokio::task::JoinHandle;
 use uuid::Uuid;
 
+use crate::models::pipeline::{LogEntry, LogLevel, OrchLiveLog};
 use crate::process::manager::ChildGuard;
-use crate::process::parser::{parse_stream_json, strip_ansi_codes, ClaudeEvent, OutputParser, StreamEvent};
+use crate::process::parser::{
+    detect_orchestration_pattern, parse_stream_json, strip_ansi_codes, ClaudeEvent, OutputParser,
+    StreamEvent,
+};
 
 // ── Event payloads emitted to the frontend ──────────────────────────────────
 
@@ -211,6 +215,10 @@ pub fn spawn_json_reader(
         let reader = BufReader::new(stdout);
         let mut lines = reader.lines();
 
+        // Buffer for accumulating text deltas into complete lines for
+        // orchestration pattern detection.
+        let mut orch_text_buf = String::new();
+
         // Emit streaming indicator — the process is running
         if let Err(e) = app.emit(
             "session:streaming",
@@ -241,6 +249,25 @@ pub fn spawn_json_reader(
                     }
                     StreamEvent::TextDelta { text } => {
                         text_events += 1;
+
+                        // ── Orchestration pattern detection ─────────────
+                        // Accumulate text deltas into a line buffer and
+                        // check each complete line for orchestration events.
+                        orch_text_buf.push_str(&text);
+                        while let Some(nl) = orch_text_buf.find('\n') {
+                            let complete_line: String =
+                                orch_text_buf.drain(..=nl).collect();
+                            if let Some(orch_event) =
+                                detect_orchestration_pattern(&complete_line)
+                            {
+                                // Emit the event to the frontend
+                                emit_claude_event(&app, session_id, &orch_event);
+                                // Also persist in the live-log so
+                                // get_orchestration_state can include it
+                                record_live_event(&app, &orch_event);
+                            }
+                        }
+
                         if let Err(e) = app.emit(
                             "session:output",
                             SessionOutputPayload {
@@ -252,7 +279,16 @@ pub fn spawn_json_reader(
                         }
                     }
                     StreamEvent::MessageStop => {
-                        // Message complete — streaming indicator cleared on process exit.
+                        // Flush remaining text buffer
+                        if !orch_text_buf.is_empty() {
+                            let remaining = std::mem::take(&mut orch_text_buf);
+                            if let Some(orch_event) =
+                                detect_orchestration_pattern(&remaining)
+                            {
+                                emit_claude_event(&app, session_id, &orch_event);
+                                record_live_event(&app, &orch_event);
+                            }
+                        }
                     }
                     StreamEvent::Result {
                         session_id: sid,
@@ -308,6 +344,46 @@ pub fn spawn_json_reader(
             },
         );
     })
+}
+
+/// Record an orchestration event in the in-memory live log.
+fn record_live_event(app: &tauri::AppHandle, event: &ClaudeEvent) {
+    use tauri::Manager;
+    let Some(log) = app.try_state::<OrchLiveLog>() else {
+        return;
+    };
+    let now = chrono::Utc::now().to_rfc3339();
+
+    match event {
+        ClaudeEvent::AgentSpawned { agent_type, task } => {
+            log.set_running();
+            log.push(LogEntry {
+                timestamp: now,
+                level: LogLevel::Agent,
+                source: format!("agent:{}", agent_type),
+                message: format!("Spawned: {}", task),
+            });
+        }
+        ClaudeEvent::AgentCompleted { agent_type, result } => {
+            log.push(LogEntry {
+                timestamp: now,
+                level: LogLevel::Agent,
+                source: format!("agent:{}", agent_type),
+                message: format!("Completed: {}", result),
+            });
+        }
+        ClaudeEvent::PhaseChange { phase, name } => {
+            log.set_running();
+            log.set_phase(*phase);
+            log.push(LogEntry {
+                timestamp: now,
+                level: LogLevel::System,
+                source: "system".to_string(),
+                message: format!("Phase {}: {}", phase, name),
+            });
+        }
+        _ => {}
+    }
 }
 
 // ── Orchestration event payloads ─────────────────────────────────────────────

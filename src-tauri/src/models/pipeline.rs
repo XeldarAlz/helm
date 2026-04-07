@@ -125,6 +125,10 @@ pub struct OrchestrationState {
     pub tasks: Vec<TaskInfo>,
     pub hooks: Vec<HookResult>,
     pub log: Vec<LogEntry>,
+    pub eco_mode: bool,
+    pub stop_protected: bool,
+    pub last_compact_save: Option<String>,
+    pub orchestrator_checkpoint: Option<String>,
 }
 
 impl Default for OrchestrationState {
@@ -140,6 +144,10 @@ impl Default for OrchestrationState {
             tasks: Vec::new(),
             hooks: Vec::new(),
             log: Vec::new(),
+            eco_mode: false,
+            stop_protected: false,
+            last_compact_save: None,
+            orchestrator_checkpoint: None,
         }
     }
 }
@@ -278,4 +286,55 @@ pub struct LogEntry {
     pub level: LogLevel,
     pub source: String,
     pub message: String,
+}
+
+// ── Live orchestration state (populated from session text output) ────────────
+
+/// In-memory buffer of orchestration events detected by parsing session
+/// text output in real time.  This allows `get_orchestration_state` to
+/// return useful data even when the orchestrator agent hasn't written
+/// PROGRESS.md or EVENTS.jsonl.
+pub struct OrchLiveLog(pub std::sync::Mutex<OrchLiveData>);
+
+#[derive(Debug, Clone, Default)]
+pub struct OrchLiveData {
+    pub log: Vec<LogEntry>,
+    pub status: Option<OrchestrationStatus>,
+    pub current_phase: u32,
+}
+
+impl OrchLiveLog {
+    pub fn new() -> Self {
+        Self(std::sync::Mutex::new(OrchLiveData::default()))
+    }
+
+    pub fn push(&self, entry: LogEntry) {
+        if let Ok(mut data) = self.0.lock() {
+            data.log.push(entry);
+        }
+    }
+
+    pub fn set_running(&self) {
+        if let Ok(mut data) = self.0.lock() {
+            if data.status.is_none() {
+                data.status = Some(OrchestrationStatus::Running);
+            }
+        }
+    }
+
+    pub fn set_phase(&self, phase: u32) {
+        if let Ok(mut data) = self.0.lock() {
+            data.current_phase = phase;
+        }
+    }
+
+    pub fn snapshot(&self) -> OrchLiveData {
+        self.0.lock().map(|d| d.clone()).unwrap_or_default()
+    }
+
+    pub fn clear(&self) {
+        if let Ok(mut data) = self.0.lock() {
+            *data = OrchLiveData::default();
+        }
+    }
 }

@@ -34,6 +34,7 @@ impl DocsWatcher {
         self.stop();
 
         let app_clone = app.clone();
+        let docs_dir_for_cb = project_dir.join("docs");
         let mut watcher = notify::recommended_watcher(move |res: Result<Event, notify::Error>| {
             match res {
                 Ok(event) => {
@@ -49,6 +50,24 @@ impl DocsWatcher {
                             .file_name()
                             .map(|f| f.to_string_lossy().to_string())
                             .unwrap_or_default();
+
+                        // When docs/ directory is created at the project root,
+                        // emit a progress-updated event so the frontend triggers
+                        // a state reload (this catches the moment the orchestrator
+                        // first writes PROGRESS.md / EVENTS.jsonl).
+                        if matches!(event.kind, EventKind::Create(_))
+                            && path.is_dir()
+                            && *path == docs_dir_for_cb
+                        {
+                            let _ = app_clone.emit(
+                                "progress-updated",
+                                DocChangedPayload {
+                                    name: "docs".to_string(),
+                                    path: path.to_string_lossy().to_string(),
+                                },
+                            );
+                            continue;
+                        }
 
                         // Check if this is a mailbox or heartbeat file change
                         let path_str = path.to_string_lossy();
@@ -68,6 +87,9 @@ impl DocsWatcher {
                             "PROGRESS.md" => "progress-updated",
                             "ACTIVITY_LOG.md" => "activity-logged",
                             "EVENTS.jsonl" => "progress-updated",
+                            "orchestration-active.json"
+                            | "pre-compact-state.md"
+                            | "orchestrator-state.md" => "progress-updated",
                             "GDD.md" | "TDD.md" | "WORKFLOW.md" | "CLAUDE.md"
                             | "CATCH_UP.md" => "document-updated",
                             _ if path

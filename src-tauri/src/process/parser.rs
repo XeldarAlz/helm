@@ -318,6 +318,118 @@ mod tests {
     }
 }
 
+// ── Orchestration pattern detection from session text ────────────────────
+
+fn agent_spawn_regex() -> &'static Regex {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    RE.get_or_init(|| {
+        // "Launching coder-1 for P1.T1 — description (complexity: M, model: sonnet)"
+        // "Spawning reviewer for Phase 1"
+        Regex::new(
+            r"(?i)(?:launching|spawning)\s+([\w-]+)\s+(?:for\s+(?:P(\d+)\.)?T?[\w.]+|for\s+Phase\s+(\d+))"
+        ).unwrap()
+    })
+}
+
+fn agent_complete_regex() -> &'static Regex {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    RE.get_or_init(|| {
+        // "Phase 1 coder agent completed successfully"
+        // "coder-1 completed task 1.1"
+        Regex::new(
+            r"(?i)(?:Phase\s+\d+\s+)?(\w[\w-]*)\s+(?:agent\s+)?completed"
+        ).unwrap()
+    })
+}
+
+fn phase_transition_regex() -> &'static Regex {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    RE.get_or_init(|| {
+        // "moving to Phase 2" / "starting Phase 3" / "Phase 2: Name"
+        Regex::new(
+            r"(?i)(?:moving\s+to|starting|beginning|entering)\s+Phase\s+(\d+)"
+        ).unwrap()
+    })
+}
+
+fn review_verdict_regex() -> &'static Regex {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    RE.get_or_init(|| {
+        // "Phase 1 PASSED review" / "Phase 2 FAILED review"
+        Regex::new(r"(?i)Phase\s+(\d+)\s+(PASSED|FAILED)\s+review").unwrap()
+    })
+}
+
+/// Detect orchestration events from a complete line of session text.
+/// Returns a structured event if a pattern matches, or None.
+pub fn detect_orchestration_pattern(line: &str) -> Option<ClaudeEvent> {
+    let trimmed = line.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+
+    // Agent spawned
+    if let Some(caps) = agent_spawn_regex().captures(trimmed) {
+        let agent_name = caps.get(1).map(|m| m.as_str()).unwrap_or("unknown");
+        let phase = caps
+            .get(2)
+            .or_else(|| caps.get(3))
+            .and_then(|m| m.as_str().parse::<u32>().ok())
+            .unwrap_or(0);
+
+        // Extract agent type from name (e.g., "coder-1" -> "coder")
+        let type_str = agent_name
+            .split('-')
+            .next()
+            .unwrap_or(agent_name);
+        if let Some(agent_type) = AgentType::from_str(type_str) {
+            return Some(ClaudeEvent::AgentSpawned {
+                agent_type,
+                task: format!("Phase {} — {}", phase, trimmed),
+            });
+        }
+    }
+
+    // Agent completed
+    if let Some(caps) = agent_complete_regex().captures(trimmed) {
+        let agent_name = caps.get(1).map(|m| m.as_str()).unwrap_or("unknown");
+        let type_str = agent_name.split('-').next().unwrap_or(agent_name);
+        if let Some(agent_type) = AgentType::from_str(type_str) {
+            return Some(ClaudeEvent::AgentCompleted {
+                agent_type,
+                result: trimmed.to_string(),
+            });
+        }
+    }
+
+    // Review verdict
+    if let Some(caps) = review_verdict_regex().captures(trimmed) {
+        let phase: u32 = caps
+            .get(1)
+            .and_then(|m| m.as_str().parse().ok())
+            .unwrap_or(0);
+        let verdict = caps.get(2).map(|m| m.as_str()).unwrap_or("unknown");
+        return Some(ClaudeEvent::PhaseChange {
+            phase,
+            name: format!("Review {}", verdict),
+        });
+    }
+
+    // Phase transition
+    if let Some(caps) = phase_transition_regex().captures(trimmed) {
+        let phase: u32 = caps
+            .get(1)
+            .and_then(|m| m.as_str().parse().ok())
+            .unwrap_or(0);
+        return Some(ClaudeEvent::PhaseChange {
+            phase,
+            name: trimmed.to_string(),
+        });
+    }
+
+    None
+}
+
 // ── Stream-JSON parser (for --output-format stream-json) ────────────────────
 
 /// Events parsed from Claude Code's `--output-format stream-json` output.

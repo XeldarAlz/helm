@@ -4,9 +4,10 @@ use std::sync::Mutex;
 use tauri::State;
 
 use crate::models::pipeline::{
-    AgentHealth, AssetCounts, FileNode, MailboxMessage, OrchestrationState, PipelineState,
+    AgentHealth, AssetCounts, FileNode, MailboxMessage, OrchLiveLog, OrchestrationState,
+    OrchestrationStatus, PipelineState,
 };
-use crate::parser::progress::parse_progress;
+use crate::parser::progress::{parse_events_jsonl, parse_progress};
 use crate::state::app_state::AppState;
 use crate::watcher::docs::DocsWatcher;
 
@@ -349,6 +350,7 @@ pub fn read_project_file(
 #[tauri::command]
 pub fn get_orchestration_state(
     state: State<AppState>,
+    live_log: State<OrchLiveLog>,
 ) -> Result<OrchestrationState, String> {
     let project_dir = state.project_dir.lock().map_err(|e| e.to_string())?;
 
@@ -365,15 +367,33 @@ pub fn get_orchestration_state(
         root.join("PROGRESS.md"),
     ];
 
-    let progress_path = match candidates.iter().find(|p| p.exists()) {
-        Some(p) => p,
-        None => return Ok(OrchestrationState::default()),
+    let progress_path = candidates.iter().find(|p| p.exists());
+
+    let mut state = if let Some(path) = progress_path {
+        let content = std::fs::read_to_string(path)
+            .map_err(|e| format!("Failed to read PROGRESS.md: {}", e))?;
+        parse_progress(&content)
+    } else {
+        OrchestrationState::default()
     };
 
-    let content = std::fs::read_to_string(progress_path)
-        .map_err(|e| format!("Failed to read PROGRESS.md: {}", e))?;
-
-    let mut state = parse_progress(&content);
+    // If PROGRESS.md yielded no data, fall back to EVENTS.jsonl which is
+    // the authoritative event journal and is typically written before
+    // PROGRESS.md is first created.
+    if state.log.is_empty() && state.agents.is_empty() {
+        let events_candidates = [
+            root.join("docs").join("EVENTS.jsonl"),
+            root.join("EVENTS.jsonl"),
+        ];
+        if let Some(events_path) = events_candidates.iter().find(|p| p.exists()) {
+            if let Ok(content) = std::fs::read_to_string(events_path) {
+                let events_state = parse_events_jsonl(&content);
+                if !events_state.log.is_empty() {
+                    state = events_state;
+                }
+            }
+        }
+    }
 
     // Enrich agents with heartbeat and mailbox data
     let claude_dir = root.join(".claude");
@@ -409,6 +429,79 @@ pub fn get_orchestration_state(
         }
     }
 
+    // Stop protection: check if orchestration-active.json exists
+    let orch_active_path = claude_dir.join("orchestration-active.json");
+    state.stop_protected = orch_active_path.exists();
+
+    // Pre-compact state: extract "## Saved:" timestamp
+    let pre_compact_path = claude_dir.join("pre-compact-state.md");
+    if pre_compact_path.exists() {
+        if let Ok(content) = std::fs::read_to_string(&pre_compact_path) {
+            for line in content.lines() {
+                if let Some(ts) = line.trim().strip_prefix("## Saved:") {
+                    let ts = ts.trim();
+                    if !ts.is_empty() {
+                        state.last_compact_save = Some(ts.to_string());
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
+    // Orchestrator checkpoint: extract "## Updated:" timestamp
+    let orch_state_path = claude_dir.join("orchestrator-state.md");
+    if orch_state_path.exists() {
+        if let Ok(content) = std::fs::read_to_string(&orch_state_path) {
+            for line in content.lines() {
+                if let Some(ts) = line.trim().strip_prefix("## Updated:") {
+                    let ts = ts.trim();
+                    if !ts.is_empty() {
+                        state.orchestrator_checkpoint = Some(ts.to_string());
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
+    // Merge live events detected from session text output.  These fill
+    // the gap when the orchestrator agent hasn't written to PROGRESS.md
+    // or EVENTS.jsonl (which is surprisingly common).
+    let live = live_log.snapshot();
+    if !live.log.is_empty() {
+        // Build a set of existing messages to avoid duplicates
+        let existing: std::collections::HashSet<String> = state
+            .log
+            .iter()
+            .map(|e| format!("{}:{}", e.timestamp, e.message))
+            .collect();
+
+        for entry in &live.log {
+            let key = format!("{}:{}", entry.timestamp, entry.message);
+            if !existing.contains(&key) {
+                state.log.push(entry.clone());
+            }
+        }
+
+        // Promote status from idle to running if live events exist
+        if matches!(state.status, OrchestrationStatus::Idle) {
+            if let Some(ref live_status) = live.status {
+                state.status = live_status.clone();
+            }
+        }
+
+        // Use live phase if file-based state has no phase info
+        if state.current_phase == 0 && live.current_phase > 0 {
+            state.current_phase = live.current_phase;
+        }
+    }
+
+    // Sort log by timestamp for consistent display
+    state
+        .log
+        .sort_by(|a, b| a.timestamp.cmp(&b.timestamp));
+
     Ok(state)
 }
 
@@ -436,6 +529,7 @@ pub async fn send_orchestration_command(
         "pause" => "/stop",
         "resume" => "/continue",
         "stop" => "/stop",
+        "clean-slop" => "/clean-slop",
         _ => return Err(format!("Unknown orchestration command: {}", command)),
     };
 
