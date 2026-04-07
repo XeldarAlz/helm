@@ -9,6 +9,7 @@
     getGitBranches,
     getGitStatus,
     getGitDiff,
+    getCommitTrailers,
     type GitCommit,
     type GitBranch,
     type GitStatus,
@@ -40,6 +41,7 @@
   let error = $state<string | null>(null);
   let expandedCommit = $state<string | null>(null);
   let commitFiles = $state<Record<string, GitDiffFile[]>>({});
+  let commitTrailers = $state<Record<string, Record<string, string>>>({});
   let mounted = $state(false);
 
   async function loadData() {
@@ -73,8 +75,12 @@
 
     if (!commitFiles[hash]) {
       try {
-        const files = await getGitDiff(hash);
+        const [files, trailers] = await Promise.all([
+          getGitDiff(hash),
+          getCommitTrailers(hash),
+        ]);
         commitFiles = { ...commitFiles, [hash]: files };
+        commitTrailers = { ...commitTrailers, [hash]: trailers };
       } catch (e) {
         addToast(`Failed to load diff: ${e}`, "error");
       }
@@ -312,6 +318,23 @@
                         {:else}
                           <div class="flex items-center justify-center py-2">
                             <Spinner size="sm" />
+                          </div>
+                        {/if}
+
+                        {#if commitTrailers[commit.hash] && Object.keys(commitTrailers[commit.hash]).length > 0}
+                          <div class="flex flex-wrap gap-1.5 mt-2 pt-2 border-t border-[var(--color-border-subtle)]">
+                            {#each Object.entries(commitTrailers[commit.hash]) as [key, value]}
+                              {@const color = key === 'Confidence' ? 'var(--color-status-success)' :
+                                key === 'Constraint' ? 'var(--color-status-info)' :
+                                key === 'Rejected' || key === 'Not-tested' ? 'var(--color-status-error)' :
+                                'var(--color-status-warning)'}
+                              <span
+                                class="text-[8px] font-bold px-1.5 py-0.5 rounded-[3px] tracking-wider"
+                                style="background: color-mix(in srgb, {color} 15%, transparent); color: {color}"
+                              >
+                                {key}: {value}
+                              </span>
+                            {/each}
                           </div>
                         {/if}
                       </div>

@@ -99,7 +99,18 @@
     "controls": {
       "pause": "Pause",
       "resume": "Resume",
-      "stop": "Stop"
+      "stop": "Stop",
+      "cleanSlop": "Clean Slop"
+    },
+    "ecoMode": "ECO",
+    "stopProtected": "Protected",
+    "stopProtectedTooltip": "Stop prevention active — use /stop to pause gracefully",
+    "contextHealth": {
+      "title": "Context Health",
+      "checkpoint": "Orchestrator",
+      "compactSave": "Compact save",
+      "noCheckpoint": "No checkpoint",
+      "noSave": "No save"
     },
     "tasks": {
       "pending": "Pending",
@@ -186,7 +197,14 @@
     "insertions": "+{count}",
     "deletions": "-{count}",
     "viewDiff": "View changes",
-    "files": "Files"
+    "files": "Files",
+    "trailers": {
+      "constraint": "Constraint",
+      "rejected": "Rejected",
+      "confidence": "Confidence",
+      "scopeRisk": "Scope Risk",
+      "notTested": "Not Tested"
+    }
   },
   "history": {
     "title": "Session History",

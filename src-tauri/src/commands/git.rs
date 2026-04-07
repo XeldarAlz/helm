@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::process::Command;
 
 use tauri::State;
@@ -240,4 +241,37 @@ pub fn get_git_diff(
         .collect();
 
     Ok(files)
+}
+
+#[tauri::command]
+pub fn get_commit_trailers(
+    state: State<AppState>,
+    commit_hash: String,
+) -> Result<HashMap<String, String>, String> {
+    let dir = resolve_project_dir(&state)?;
+    let output = git_cmd(&dir, &["log", "--format=%B", "-1", &commit_hash])?;
+
+    let mut trailers = HashMap::new();
+    let known = [
+        "Constraint",
+        "Rejected",
+        "Confidence",
+        "Scope-risk",
+        "Not-tested",
+    ];
+
+    for line in output.lines().rev() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            break;
+        }
+        if let Some((key, value)) = trimmed.split_once(':') {
+            let key = key.trim();
+            if known.iter().any(|k| k.eq_ignore_ascii_case(key)) {
+                trailers.insert(key.to_string(), value.trim().to_string());
+            }
+        }
+    }
+
+    Ok(trailers)
 }

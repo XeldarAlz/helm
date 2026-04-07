@@ -2,19 +2,21 @@
   import { _ } from "svelte-i18n";
   import Button from "$lib/components/common/Button.svelte";
   import Badge from "$lib/components/common/Badge.svelte";
-  import { Pause, Play, Square, Zap } from "lucide-svelte";
+  import { Pause, Play, Square, Zap, Shield, Leaf, Sparkles } from "lucide-svelte";
   import { sendOrchestrationCommand } from "$lib/utils/ipc";
   import { addToast } from "$lib/stores/toasts";
 
   interface Props {
     status: "idle" | "running" | "paused" | "stopped" | "completed" | "failed";
+    ecoMode?: boolean;
+    stopProtected?: boolean;
   }
 
-  let { status }: Props = $props();
+  let { status, ecoMode = false, stopProtected = false }: Props = $props();
 
   let sending = $state<string | null>(null);
 
-  async function handleCommand(command: "pause" | "resume" | "stop") {
+  async function handleCommand(command: "pause" | "resume" | "stop" | "clean-slop") {
     sending = command;
     try {
       await sendOrchestrationCommand(command);
@@ -58,6 +60,23 @@
     {statusLabel}
   </Badge>
 
+  {#if ecoMode}
+    <Badge variant="success" size="sm">
+      <Leaf size={10} class="mr-0.5 inline" />
+      {$_("orchestration.ecoMode")}
+    </Badge>
+  {/if}
+
+  {#if stopProtected}
+    <span
+      class="text-[8px] font-bold px-1 py-0.5 rounded-[2px] uppercase tracking-wider"
+      style="background: color-mix(in srgb, var(--color-accent) 15%, transparent); color: var(--color-accent)"
+      title={$_("orchestration.stopProtectedTooltip")}
+    >
+      <Shield size={8} class="inline mr-0.5" />{$_("orchestration.stopProtected")}
+    </span>
+  {/if}
+
   <!-- Action buttons -->
   {#if status === "running"}
     <Button
@@ -100,6 +119,17 @@
     >
       {#snippet icon()}<Square size={12} />{/snippet}
       {$_("orchestration.controls.stop")}
+    </Button>
+  {:else if status === "completed"}
+    <Button
+      variant="secondary"
+      size="sm"
+      loading={sending === "clean-slop"}
+      disabled={sending !== null}
+      onclick={() => handleCommand("clean-slop")}
+    >
+      {#snippet icon()}<Sparkles size={12} />{/snippet}
+      {$_("orchestration.controls.cleanSlop")}
     </Button>
   {/if}
 </div>

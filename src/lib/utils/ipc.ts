@@ -125,6 +125,10 @@ export interface OrchestrationState {
   tasks: TaskInfo[];
   hooks: HookResultInfo[];
   log: LogEntry[];
+  eco_mode: boolean;
+  stop_protected: boolean;
+  last_compact_save: string | null;
+  orchestrator_checkpoint: string | null;
 }
 
 export interface PhaseInfo {
@@ -175,7 +179,7 @@ export async function getOrchestrationState(): Promise<OrchestrationState> {
   return invoke("get_orchestration_state");
 }
 
-export async function sendOrchestrationCommand(command: "pause" | "resume" | "stop"): Promise<void> {
+export async function sendOrchestrationCommand(command: "pause" | "resume" | "stop" | "clean-slop"): Promise<void> {
   return invoke("send_orchestration_command", { command });
 }
 
@@ -228,4 +232,8 @@ export async function getGitStatus(): Promise<GitStatus> {
 
 export async function getGitDiff(commitHash: string): Promise<GitDiffFile[]> {
   return invoke("get_git_diff", { commitHash });
+}
+
+export async function getCommitTrailers(commitHash: string): Promise<Record<string, string>> {
+  return invoke("get_commit_trailers", { commitHash });
 }

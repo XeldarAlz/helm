@@ -184,3 +184,5 @@
 | 2026-04-07 19:29:05 | Edit | `/Users/xeldar/Development/helm/.claude/commands/dry-run.md` |
 | 2026-04-07 19:29:08 | Edit | `/Users/xeldar/Development/helm/.claude/commands/dry-run.md` |
 | 2026-04-07 19:29:21 | Edit | `/Users/xeldar/Development/helm/.claude/CLAUDE.md` |
+| 2026-04-07 19:53:35 | Write | `/Users/xeldar/.claude/plans/structured-waddling-zephyr.md` |
+| 2026-04-07 22:35:49 | Write | `/Users/xeldar/.claude/plans/peaceful-bubbling-volcano.md` |
