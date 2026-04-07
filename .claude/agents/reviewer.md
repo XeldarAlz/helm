@@ -183,6 +183,8 @@ Only CRITICAL and MAJOR issues cause a FAIL. MINOR issues are noted but don't bl
 
 If your task prompt includes a **checkpoint file path**, use it to protect against context loss:
 
+**Post-compaction recovery:** If `.claude/pre-compact-state.md` exists, read it first — it contains a consolidated recovery brief saved automatically before context compaction. Use it alongside your individual checkpoint file to restore full working context.
+
 **At START:** Check if your checkpoint file exists. If it does, read it — you may be resuming after context compaction.
 
 **During work:** After completing each major review section (architecture, performance, compilation, runtime), update your checkpoint with: files reviewed so far, issues found, checklist progress, compilation/runtime results.

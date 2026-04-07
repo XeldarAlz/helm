@@ -60,6 +60,40 @@ Examples:
 - Keep body to 2-4 lines max
 - No emojis
 
+### Structured Decision Trailers
+
+After the commit body, add trailing metadata that captures decision context. The reviewer's feedback and the task's TDD specification provide this information — extract and record it.
+
+**Trailer format** (one per line, after a blank line following the body):
+
+```
+Constraint: <what project constraint most shaped this implementation>
+Rejected: <alternative approach considered but not taken, and why>
+Confidence: high | medium | low
+Scope-risk: <which other systems could be affected by these changes>
+Not-tested: <specific scenarios or edge cases without test coverage>
+```
+
+**Rules for trailers:**
+- Include `Constraint` and `Confidence` on every commit
+- Include `Rejected` only when a meaningful alternative existed
+- Include `Scope-risk` only when changes touch shared interfaces or base types
+- Include `Not-tested` only when there are known gaps (e.g., integration scenarios requiring Unity runtime)
+- Keep each trailer to one line, max 120 characters
+- Do NOT fabricate trailers — only include what the reviewer feedback and TDD actually indicate
+
+**Example:**
+```
+feat(wallet): implement virtual currency wallet with persistence support
+
+Implements P2.T4 — core wallet system with add/deduct/query operations
+and JSON-based persistence through the save system interface.
+
+Constraint: zero-alloc hot paths — pre-allocated transaction buffer
+Rejected: event sourcing pattern — overkill for single-currency wallet
+Confidence: high
+Not-tested: concurrent access from multiple systems (deferred to integration phase)
+```
 
 ## Execution Process
 
