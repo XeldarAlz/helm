@@ -3,17 +3,20 @@
 ## Field Declarations
 
 - `[SerializeField] private` for inspector-exposed fields — never public
-- `private` fields use `m_` prefix: `m_MoveSpeed`, `m_Health`
-- `static` fields use `s_` prefix: `s_Instance`
-- `const` and `static readonly` use `k_` prefix: `k_MaxHealth`, `k_JumpHash`
+- Private/protected fields use `_lowerCamelCase`: `_moveSpeed`, `_health`
+- Public fields use `lowerCamelCase`: `moveSpeed`, `health`
+- Properties (public and private) use `UpperCamelCase`: `MoveSpeed`, `Health`
+- `static readonly` fields use `UpperCamelCase`: `JumpHash`, `DefaultColor`
+- `const` fields use `UPPER_SNAKE_CASE`: `MAX_HEALTH`, `MAX_PLAYER_COUNT`
 - `readonly` for fields set only in constructor or Awake
 
 ```csharp
-[SerializeField] private float m_MoveSpeed = 5f;
-[SerializeField] private Transform m_SpawnPoint;
+[SerializeField] private float _moveSpeed = 5f;
+[SerializeField] private Transform _spawnPoint;
 
-private Rigidbody m_Rigidbody;
-private static readonly int k_JumpHash = Animator.StringToHash("Jump");
+private Rigidbody _rigidbody;
+private static readonly int JumpHash = Animator.StringToHash("Jump");
+private const int MAX_JUMP_COUNT = 3;
 ```
 
 ## Types and Naming

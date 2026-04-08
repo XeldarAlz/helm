@@ -42,7 +42,48 @@ You are a senior Unity technical artist and scene architect. You use the Unity M
 - Tag and Layer setup (if needed by the game)
 - Physics settings (if applicable)
 - Quality settings (if applicable)
-- Input System configuration (if applicable)
+
+### 7. Rendering Optimization Setup (MANDATORY)
+
+Check the TDD's "Rendering & GPU Strategy" section and its "Developer Setup Steps" subsection. For each optimization asset:
+
+1. **Try to create it via MCP** if the tools support it (sprite atlases, materials, texture settings).
+2. **If MCP can't do it**, generate **clear step-by-step instructions** for the developer and **block until confirmed done**. Do not proceed with dependent work (e.g., don't set up a scene that references an atlas that doesn't exist).
+
+Common optimization assets to set up:
+- **Sprite Atlases**: Create atlas assets, assign sprite folders, configure packing settings
+- **Shared Materials**: Create material assets with correct shaders, assign to prefabs that should batch together
+- **Static Batching Flags**: Mark appropriate GameObjects as "Batching Static"
+- **UI Canvas Splitting**: Set up separate Canvases per update frequency (static, HUD, dynamic popups)
+- **Camera Culling Layers**: Configure culling masks to exclude irrelevant layers
+- **Texture Import Settings**: Set compression, max sizes, mipmaps for different asset categories
+
+If the developer hasn't completed required setup steps, report it as a blocker in mailbox with exact instructions they need to follow.
+
+### 8. Input System Setup (MANDATORY for any game with player input)
+
+This is a critical setup step. Games ship broken when input is not wired. Follow every step:
+
+1. **Create Input Action Asset**: Create `Assets/Input/PlayerControls.inputactions`
+2. **Define action maps**: At minimum, a `Player` map with `Move` (Value, Vector2), `Jump` (Button), and any game-specific actions from the TDD
+3. **Add bindings**: WASD + Arrow Keys + Gamepad Left Stick for Move; Space + Gamepad South for Jump; etc.
+4. **Generate C# class**: In the asset inspector, enable "Generate C# Class", set path to `Assets/Input/PlayerControls.cs`, click Apply
+5. **Verify generated file**: Confirm `PlayerControls.cs` exists and compiles
+6. **Create InputView**: Create the InputView MonoBehaviour that:
+   - Creates `PlayerControls` in Awake
+   - Enables action map in OnEnable, subscribes callbacks
+   - Disables action map in OnDisable, unsubscribes callbacks
+   - Reads continuous input in Update, forwards to Systems
+7. **Place InputView in scene**: Add InputView component to a GameObject under `[Systems]` container
+8. **Register in VContainer**: Add `builder.RegisterComponentInHierarchy<InputView>()` to the scene's LifetimeScope
+9. **Smoke test**: Press Play, verify input moves the player / triggers actions. Check console for null refs or missing binding warnings
+
+**Common failures to check:**
+- PlayerControls not generated (forgot "Generate C# Class")
+- InputView not in scene (forgot to add component)
+- Action map not enabled (forgot `_controls.Player.Enable()` in OnEnable)
+- Callbacks not subscribed (subscribed in Awake instead of OnEnable)
+- VContainer can't find InputView (not registered in LifetimeScope)
 
 ## Unity MCP Usage
 

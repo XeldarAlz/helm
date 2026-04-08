@@ -165,26 +165,21 @@ Complete Unity project folder layout.
 
 For each:
 - Purpose and responsibilities
-- Public API (interfaces and key methods with signatures)
-- Data structures (with struct/class/record justification)
-- Hot path identification and optimization strategy
-- Error handling approach
+- Key interfaces (names and intent, NOT full signatures)
+- Data flow: what goes in, what comes out
+- How it connects to other systems (dependency direction, events)
+- Hot path identification
 
 ## 8. Gameplay Systems
 For EACH gameplay system:
 ### 8.X [System Name]
-- Purpose
-- Class diagram (textual)
-- Interfaces
-- Key classes with full signatures
-  - Public methods
-  - Key private methods
-  - Data structures
-- State machine (if applicable)
-- Event emissions and subscriptions
-- Configuration ScriptableObjects (fields and types)
-- Hot paths and optimization notes
-- Test strategy (what to test, edge cases)
+- Purpose and responsibility boundaries
+- MVS breakdown: which Model(s), System(s), View(s) are needed and why
+- Pseudo code for core algorithm (NOT line-by-line C# — describe the logic flow)
+- State transitions (if applicable, as a state diagram description)
+- Event emissions and subscriptions (message names and when they fire)
+- Configuration data (what's tunable, NOT full SO field lists)
+- Architectural notes: why this design, what patterns used, how it fits the whole
 
 ## 9. UI Architecture
 - UI framework approach (UI Toolkit or uGUI, justify choice)
@@ -210,34 +205,55 @@ For EACH gameplay system:
 - Identified hot paths with optimization strategies
 - Profiling checkpoints
 
-## 13. Testing Strategy
+## 13. Rendering & GPU Strategy (MANDATORY)
+- Draw call minimization plan: aim for the lowest count possible, explain how
+- Sprite Atlas plan: which sprites go in which atlases, max atlas sizes
+- Material sharing strategy: which objects share materials, where MaterialPropertyBlock is needed
+- Batching approach: SRP Batcher, static batching, dynamic batching, GPU instancing
+- UI Canvas split plan: which canvases, what goes on each, update frequency rationale
+- Overdraw risks: identified problem areas and mitigation (e.g., overlapping transparents)
+- Shader strategy: which shaders, complexity budget, variant management
+
+This section is NON-NEGOTIABLE. A game with perfect C# that runs at 10 FPS due to 500 draw calls is a failed architecture.
+
+### 13.1 Developer Setup Steps (GPU Optimization)
+List every manual Unity Editor step the developer must complete for rendering optimization. Agents cannot always create these assets directly. Be specific — menu paths, settings, which assets to include. Examples:
+- Sprite Atlas creation (which atlases, which sprites go in each)
+- Material presets (shared materials to create, shader assignments)
+- Texture import settings (compression, max sizes, mipmaps)
+- Static batching flags (which objects to mark)
+- Lightmap baking settings (if applicable)
+- Occlusion culling setup (if applicable)
+
+These steps should be ordered: what to do first, what depends on what. Agents will block and prompt the developer when these assets are needed but don't exist.
+
+## 14. Testing Strategy
 - Unit test structure and conventions
 - Integration test approach
 - Test data factories
 - Mocking strategy (interfaces, not concrete mocking frameworks)
 
-## 14. Design Patterns Summary
+## 15. Design Patterns Summary
 Table mapping each system to its patterns with justification.
 
-## 15. Class Index
-Alphabetical list of all classes/structs/interfaces/records with:
-- Full namespace
-- Assembly
-- One-line purpose
-- Key relationships
+## 16. Class Index
+Concise table of all expected classes/interfaces with:
+- Name, assembly, one-line purpose
+- (No full namespaces or method listings — the coder agent decides implementation details)
 
-## 16. Open Questions / Risks
+## 17. Open Questions / Risks
 Any remaining technical risks or decisions deferred to implementation.
 ```
 
 ## Rules
 
-- **Be exhaustive.** Every class, every interface, every significant method must be in the TDD.
+- **Architecture over implementation.** Describe WHAT each system does, WHY it's designed that way, and HOW systems connect. Do NOT write line-by-line C# — use pseudo code for algorithms and plain English for everything else. The coder agent decides implementation details.
+- **Pseudo code only.** When showing logic flow, use concise pseudo code (indented plain text, not compilable C#). Full method signatures, field declarations, and boilerplate belong in the coder phase.
 - **Justify everything.** No pattern or decision without a clear "why."
 - **Think adversarially.** What could go wrong? What edge cases exist? What happens under load?
 - **Respect the constraints.** If a design violates any constraint, redesign it.
 - **Ask before assuming.** If the GDD is ambiguous, ask the developer. Don't guess.
-- **Production quality.** This TDD should be good enough for a team of 5 senior devs to implement independently.
+- **Concise and scannable.** Aim for a TDD that a senior dev can read in 15 minutes. Use tables, bullet points, and diagrams over prose. Cut anything that repeats what's already in CLAUDE.md rules.
 - **After generating**, ask the developer to review. Make requested changes.
 - **Once confirmed**, inform: "TDD is complete. Run `/plan-workflow` to generate the execution plan."
 

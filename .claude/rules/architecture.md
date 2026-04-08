@@ -22,22 +22,22 @@ public sealed class PlayerModel
 // --- System (plain C#, injected via VContainer, owns the Model) ---
 public sealed class PlayerSystem : IDisposable
 {
-    private readonly PlayerModel m_Model;
-    private readonly IPublisher<PlayerDiedMessage> m_DiedPublisher;
+    private readonly PlayerModel _model;
+    private readonly IPublisher<PlayerDiedMessage> _diedPublisher;
 
     [Inject]
     public PlayerSystem(PlayerModel model, IPublisher<PlayerDiedMessage> diedPublisher)
     {
-        m_Model = model;
-        m_DiedPublisher = diedPublisher;
+        _model = model;
+        _diedPublisher = diedPublisher;
     }
 
     public void TakeDamage(int amount)
     {
-        m_Model.Health.Value = Mathf.Max(0, m_Model.Health.Value - amount);
-        if (m_Model.IsDead)
+        _model.Health.Value = Mathf.Max(0, _model.Health.Value - amount);
+        if (_model.IsDead)
         {
-            m_DiedPublisher.Publish(new PlayerDiedMessage());
+            _diedPublisher.Publish(new PlayerDiedMessage());
         }
     }
 
@@ -47,25 +47,25 @@ public sealed class PlayerSystem : IDisposable
 // --- View (MonoBehaviour, observes Model, no logic) ---
 public sealed class PlayerView : MonoBehaviour
 {
-    [SerializeField] private Slider m_HealthBar;
+    [SerializeField] private Slider _healthBar;
 
-    private PlayerModel m_Model;
-    private readonly CompositeDisposable m_Disposables = new();
+    private PlayerModel _model;
+    private readonly CompositeDisposable _disposables = new();
 
     [Inject]
     public void Construct(PlayerModel model)
     {
-        m_Model = model;
+        _model = model;
     }
 
     private void Start()
     {
-        m_Model.Health
-            .Subscribe(hp => m_HealthBar.value = hp / 100f)
-            .AddTo(m_Disposables);
+        _model.Health
+            .Subscribe(hp => _healthBar.value = hp / 100f)
+            .AddTo(_disposables);
     }
 
-    private void OnDestroy() => m_Disposables.Dispose();
+    private void OnDestroy() => _disposables.Dispose();
 }
 ```
 
@@ -146,17 +146,17 @@ public readonly struct DamageDealtMessage
 // --- Publishing (System → System or System → View) ---
 public sealed class CombatSystem : IDisposable
 {
-    private readonly IPublisher<DamageDealtMessage> m_DamagePublisher;
+    private readonly IPublisher<DamageDealtMessage> _damagePublisher;
 
     [Inject]
     public CombatSystem(IPublisher<DamageDealtMessage> damagePublisher)
     {
-        m_DamagePublisher = damagePublisher;
+        _damagePublisher = damagePublisher;
     }
 
     public void DealDamage(int amount, Vector3 position)
     {
-        m_DamagePublisher.Publish(new DamageDealtMessage(amount, position));
+        _damagePublisher.Publish(new DamageDealtMessage(amount, position));
     }
 
     public void Dispose() { }
@@ -165,12 +165,12 @@ public sealed class CombatSystem : IDisposable
 // --- Subscribing (in System or View) ---
 public sealed class DamagePopupSystem : IDisposable
 {
-    private readonly IDisposable m_Subscription;
+    private readonly IDisposable _subscription;
 
     [Inject]
     public DamagePopupSystem(ISubscriber<DamageDealtMessage> damageSubscriber)
     {
-        m_Subscription = damageSubscriber.Subscribe(OnDamageDealt);
+        _subscription = damageSubscriber.Subscribe(OnDamageDealt);
     }
 
     private void OnDamageDealt(DamageDealtMessage message)
@@ -178,7 +178,7 @@ public sealed class DamagePopupSystem : IDisposable
         // spawn popup at message.Position showing message.Amount
     }
 
-    public void Dispose() => m_Subscription.Dispose();
+    public void Dispose() => _subscription.Dispose();
 }
 ```
 
@@ -196,14 +196,14 @@ UniTask replaces coroutines entirely. No `StartCoroutine`, no `IEnumerator`, no 
 ```csharp
 public sealed class WaveSpawnerSystem : IDisposable
 {
-    private readonly CancellationTokenSource m_Cts = new();
+    private readonly CancellationTokenSource _cts = new();
 
     public async UniTaskVoid StartSpawning()
     {
         for (int waveIndex = 0; waveIndex < 10; waveIndex++)
         {
-            await SpawnWave(waveIndex, m_Cts.Token);
-            await UniTask.Delay(TimeSpan.FromSeconds(5), cancellationToken: m_Cts.Token);
+            await SpawnWave(waveIndex, _cts.Token);
+            await UniTask.Delay(TimeSpan.FromSeconds(5), cancellationToken: _cts.Token);
         }
     }
 
@@ -217,7 +217,7 @@ public sealed class WaveSpawnerSystem : IDisposable
         }
     }
 
-    public void Dispose() => m_Cts.Cancel();
+    public void Dispose() => _cts.Cancel();
 }
 ```
 
@@ -245,14 +245,107 @@ Items, abilities, enemy configs, level data — all should be ScriptableObjects:
 [CreateAssetMenu(menuName = "Game/Weapon Definition")]
 public sealed class WeaponDefinition : ScriptableObject
 {
-    [SerializeField] private string m_DisplayName;
-    [SerializeField] private float m_Damage;
-    [SerializeField] private float m_FireRate;
-    [SerializeField] private GameObject m_Prefab;
+    [SerializeField] private string _displayName;
+    [SerializeField] private float _damage;
+    [SerializeField] private float _fireRate;
+    [SerializeField] private GameObject _prefab;
 }
 ```
 
 ScriptableObjects hold **static/config data**. Runtime mutable state goes in Models.
+
+## Input System Architecture (NON-NEGOTIABLE)
+
+Input is a **View-layer concern**. It follows the same MVS pattern: InputView reads raw input and forwards it to Systems. Systems never touch Unity Input directly.
+
+### InputView Pattern
+
+```csharp
+// InputView — thin adapter between New Input System and game Systems
+public sealed class InputView : MonoBehaviour
+{
+    private PlayerControls _controls;
+    private PlayerSystem _playerSystem;
+    private UISystem _uiSystem;
+
+    private void Awake()
+    {
+        _controls = new PlayerControls();
+    }
+
+    [Inject]
+    public void Construct(PlayerSystem playerSystem, UISystem uiSystem)
+    {
+        _playerSystem = playerSystem;
+        _uiSystem = uiSystem;
+    }
+
+    private void OnEnable()
+    {
+        _controls.Player.Enable();
+        _controls.Player.Jump.performed += OnJump;
+        _controls.Player.Attack.performed += OnAttack;
+        _controls.Player.Pause.performed += OnPause;
+    }
+
+    private void OnDisable()
+    {
+        _controls.Player.Jump.performed -= OnJump;
+        _controls.Player.Attack.performed -= OnAttack;
+        _controls.Player.Pause.performed -= OnPause;
+        _controls.Player.Disable();
+    }
+
+    private void Update()
+    {
+        Vector2 move = _controls.Player.Move.ReadValue<Vector2>();
+        _playerSystem.SetMoveInput(move);
+    }
+
+    private void OnJump(InputAction.CallbackContext ctx) => _playerSystem.Jump();
+    private void OnAttack(InputAction.CallbackContext ctx) => _playerSystem.Attack();
+    private void OnPause(InputAction.CallbackContext ctx) => _uiSystem.TogglePause();
+}
+```
+
+### VContainer Registration
+
+```csharp
+protected override void Configure(IContainerBuilder builder)
+{
+    // InputView is a MonoBehaviour — find in scene
+    builder.RegisterComponentInHierarchy<InputView>();
+}
+```
+
+### Rules
+- **InputView owns PlayerControls** — no other class creates or holds a `PlayerControls` instance
+- **InputView is a View** — it reads input and calls Systems. Zero game logic
+- **Systems are input-agnostic** — they expose methods like `SetMoveInput(Vector2)`, `Jump()`, `Attack()`. They never know where input comes from (keyboard, gamepad, AI, network replay)
+- **One InputView per scene** — prevents duplicate action subscriptions
+- **Enable/Disable is mandatory** — `OnEnable` enables action maps, `OnDisable` disables them and unsubscribes callbacks
+- **Continuous input in Update** — read `ReadValue<Vector2>()` in Update, cache it. Apply physics in FixedUpdate using cached values
+- **Discrete input via callbacks** — button presses use `performed` callbacks, not polling
+- **Action map switching lives in InputView** — controlled by Systems via method calls (e.g., `SwitchToUI()`, `SwitchToGameplay()`)
+
+### Testing Input-Driven Systems
+
+Because Systems are input-agnostic, they are trivially testable:
+```csharp
+[Test]
+public void SetMoveInput_WithRightVector_UpdatesModelPosition()
+{
+    var model = new PlayerModel();
+    var sut = new PlayerSystem(model);
+
+    sut.SetMoveInput(Vector2.right);
+    sut.Tick(1f);
+
+    Assert.That(model.Position.Value.x, Is.GreaterThan(0));
+}
+```
+
+No input mocking needed — the System never sees InputAction, PlayerControls, or any Unity Input type.
 
 ## Dependency Direction
 

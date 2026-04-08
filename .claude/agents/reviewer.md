@@ -82,6 +82,14 @@ If your task prompt includes a **Mailbox** or **Heartbeat** section, follow thes
 - [ ] Struct used for frequently-iterated data types
 - [ ] No unnecessary closures or delegates created per-frame
 
+### Rendering & GPU Optimization (CRITICAL — blocks PASS)
+- [ ] **No `renderer.material` access** — must use `sharedMaterial` or `MaterialPropertyBlock`
+- [ ] **Sprite atlases exist** for all 2D sprite groups planned in the TDD. If missing → FAIL with developer instructions to create them
+- [ ] **Shared materials used** — objects that should share materials (per TDD) actually reference the same material asset
+- [ ] **UI Canvases split by update frequency** — not a single monolithic Canvas for everything
+- [ ] **Raycast Target disabled** on non-interactive UI elements
+- [ ] If TDD specified developer setup steps for GPU optimization, verify they were completed. If not → FAIL with the specific steps the developer still needs to do
+
 ### C# Quality
 - [ ] Naming conventions: PascalCase (types, methods, properties), _camelCase (private fields), camelCase (params, locals)
 - [ ] One type per file, file name matches type name
@@ -89,6 +97,7 @@ If your task prompt includes a **Mailbox** or **Heartbeat** section, follow thes
 - [ ] Proper use of C# 9 features where appropriate (records, pattern matching, switch expressions)
 - [ ] Guard clauses for invalid inputs
 - [ ] No dead code, no commented-out code, no TODOs
+- [ ] **Unused member scan** (see Unused Code Detection section below)
 - [ ] Appropriate access modifiers (minimal public surface)
 
 ### Interface Design
@@ -119,10 +128,69 @@ If your task prompt includes a **Mailbox** or **Heartbeat** section, follow thes
 - [ ] No null reference exceptions, DI failures, or missing asset errors
 - [ ] Exited Play mode via MCP (`manage_editor(action: "stop")`)
 
+### Input System Compliance (CRITICAL — blocks PASS)
+- [ ] **No legacy Input API**: Zero usage of `Input.GetKey`, `Input.GetAxis`, `Input.GetButton`, `Input.mousePosition`
+- [ ] **InputView exists**: If the game has player input, there MUST be an InputView MonoBehaviour
+- [ ] **PlayerControls generated**: `.inputactions` asset exists with "Generate C# Class" enabled → `PlayerControls.cs` generated
+- [ ] **Enable in OnEnable**: InputView enables action maps in `OnEnable()` — without this, input is dead at runtime
+- [ ] **Disable in OnDisable**: InputView disables action maps and unsubscribes all callbacks in `OnDisable()`
+- [ ] **Every += has a -=**: Every `action.performed += OnCallback` has a matching `action.performed -= OnCallback` in OnDisable
+- [ ] **Continuous input in Update**: `ReadValue<>()` and polling happen in `Update()`, NOT in `FixedUpdate()`
+- [ ] **Systems are input-agnostic**: Systems expose `SetMoveInput(Vector2)`, `Jump()`, etc. — they NEVER reference `InputAction`, `PlayerControls`, or `UnityEngine.InputSystem`
+- [ ] **InputView registered in VContainer**: `builder.RegisterComponentInHierarchy<InputView>()` in LifetimeScope
+- [ ] **Action map switching**: If game has UI/menu states, InputView handles map switching (disable current, enable next)
+
+### Input Runtime Verification (MANDATORY)
+
+During Play mode runtime validation, specifically check:
+- [ ] Input actually moves the player / triggers actions (not just zero errors — verify responsiveness)
+- [ ] Console shows no "InputAction has no bindings" or "InputActionAsset is null" warnings
+- [ ] If on-screen controls exist, they respond to touch/click
+
 ### Acceptance Criteria
 - [ ] Every criterion from the task assignment is satisfied
 - [ ] Output files are at the correct paths
 - [ ] Namespaces match folder structure
+
+## Unused Code Detection (MANDATORY)
+
+After reading all files in the review scope, you MUST actively search for unused members. This is not a passive observation — it requires cross-referencing callers. Unused code is a **MAJOR** issue that blocks PASS.
+
+### What to check
+
+For every **private method, private property, and private field** in each reviewed file:
+1. Grep for its name across the entire project (`Assets/` directory)
+2. If zero callers outside its own declaration → flag as unused
+
+For every **public method and public property** on non-interface types:
+1. Grep for its name across the entire project
+2. If zero callers outside its own file → flag as unused (exception: methods required by interface contracts or Unity callbacks like `Awake`, `Start`, `Update`, `OnEnable`, `OnDisable`, `OnDestroy`, `OnValidate`, `OnDrawGizmos`, `OnCollision*`, `OnTrigger*`, `OnPointerClick`, `OnDrag`, etc.)
+
+For every **using statement**:
+1. Check if any type from that namespace is actually used in the file
+2. If not → flag as unused import
+
+For every **parameter** on private methods:
+1. Check if the parameter is read within the method body
+2. If not → flag as unused parameter (exception: parameters required by delegate signatures, interface contracts, or event handlers)
+
+### What to report
+
+In the verdict, list unused members under a dedicated section:
+
+```
+### Unused Code (must remove)
+- **Unused method**: `PlayerSystem.CalculateBonus()` — zero callers in project
+- **Unused field**: `_cachedValue` in `ScoreSystem` — declared but never read
+- **Unused import**: `using System.Collections.Generic` in `GameConfig.cs` — no generic collections used
+- **Unused property**: `IsReady` in `SpawnSystem` — no external access found
+```
+
+### Severity
+- Unused private members → **MAJOR** (blocks PASS)
+- Unused public members (not interface/Unity callbacks) → **MAJOR** (blocks PASS)
+- Unused imports → **MAJOR** (blocks PASS)
+- Unused parameters on private methods → **MINOR** (warn, does not block)
 
 ## Verdict Format
 

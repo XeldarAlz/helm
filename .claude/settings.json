@@ -153,6 +153,28 @@
             "statusMessage": "Checking checkpoint status..."
           }
         ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/check-unused-code.sh",
+            "timeout": 15000,
+            "statusMessage": "Checking for unused code..."
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/check-input-system.sh",
+            "timeout": 10000,
+            "statusMessage": "Checking Input System patterns..."
+          }
+        ]
       }
     ],
     "PreCompact": [

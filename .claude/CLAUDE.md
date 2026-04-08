@@ -22,10 +22,12 @@ Detailed rules are in `.claude/rules/` — agents load these automatically. Summ
 - **Unity 6 + C# 9**: Records, init-only setters, pattern matching, switch expressions. (See `rules/csharp-unity.md`)
 - **Serialization safety**: `[FormerlySerializedAs]` on ANY renamed serialized field. Unity null check (`== null` not `?.`). (See `rules/serialization.md`)
 - **No runtime GameObject creation**: Prefabs + pools only. (See `rules/performance.md`)
+- **Input System mandatory**: New Input System only. InputView owns PlayerControls, enables in OnEnable, disables in OnDisable. Systems are input-agnostic. Legacy Input API is BLOCKED. (See `rules/unity-specifics.md`, `rules/architecture.md`)
 - **ScriptableObjects for config**: All configuration data as SO assets. (See `rules/architecture.md`)
 - **UI must use RectTransform**: Never plain Transform under Canvas.
 - **Always use TextMeshPro**: Never legacy `UnityEngine.UI.Text`.
 - **Editor/Runtime separation**: Guard `UnityEditor` with `#if UNITY_EDITOR`. (See `rules/unity-specifics.md`)
+- **Rendering optimization mandatory**: Draw call budgets, sprite atlases, material sharing, batching strategy, UI canvas splitting — planned in TDD, not afterthought. (See `rules/performance.md`)
 
 ## Rules (`.claude/rules/`)
 
@@ -35,7 +37,7 @@ Detailed coding standards loaded automatically by agents:
 |-----------|--------|
 | `architecture.md` | Pure C# separation, interfaces, SOLID, dependency direction, no god objects |
 | `csharp-unity.md` | Naming (PascalCase types, _camelCase fields), sealed by default, structure ordering |
-| `performance.md` | Zero-alloc hot paths, caching, pooling, physics optimization |
+| `performance.md` | Zero-alloc hot paths, caching, pooling, physics optimization, **draw calls, atlasing, batching, material sharing, UI canvas splitting** |
 | `serialization.md` | FormerlySerializedAs, Unity null checks, SerializeReference, ISerializationCallbackReceiver |
 | `unity-specifics.md` | Editor guards, platform defines, lifecycle order, threading, no coroutines |
 
@@ -45,8 +47,8 @@ Contextual Unity knowledge auto-loaded by agents based on file patterns:
 
 | Category | Skills | Always Active |
 |----------|--------|---------------|
-| **Core** (6) | serialization-safety, event-systems, scriptable-objects, assembly-definitions, unity-mcp-patterns, object-pooling | Yes |
-| **Systems** (10) | urp-pipeline, input-system, addressables, cinemachine, animation, audio, physics, navmesh, ui-toolkit, shader-graph | No |
+| **Core** (7) | serialization-safety, event-systems, scriptable-objects, assembly-definitions, unity-mcp-patterns, object-pooling, input-system | Yes |
+| **Systems** (9) | urp-pipeline, addressables, cinemachine, animation, audio, physics, navmesh, ui-toolkit, shader-graph | No |
 | **Gameplay** (6) | character-controller, inventory-system, dialogue-system, save-system, state-machine, procedural-generation | No |
 | **Genre** (12) | hyper-casual, match3, idle-clicker, endless-runner, puzzle, rpg, platformer-2d, topdown, tower-defense, roguelike, card-game, racing | No |
 | **Third-Party** (5) | dotween, unitask, vcontainer, textmeshpro, odin-inspector | No |
@@ -117,10 +119,12 @@ All commands with prerequisites will check for required documents before running
 | Hook | Behavior |
 |------|----------|
 | `check-pure-csharp` | **BLOCKS** if `using UnityEngine` found in Logic/Core/Systems directories |
-| `check-naming-conventions` | Warns about non-PascalCase types, non-standard field naming |
+| `check-naming-conventions` | Warns about non-PascalCase types, non-standard field naming (`_lowerCamelCase` private, `lowerCamelCase` public, `UpperCamelCase` properties/static readonly, `UPPER_SNAKE_CASE` constants) |
 | `check-no-linq-hotpath` | Warns if `System.Linq` imported alongside hot path methods |
 | `check-no-runtime-instantiate` | Warns about `Instantiate()`, `new GameObject()`, `Destroy()` |
+| `check-input-system` | **BLOCKS** legacy Input API; warns about missing Enable/Disable, unsubscribed callbacks, input in FixedUpdate |
 | `check-test-exists` | Reminds if a logic class has no corresponding test file |
+| `check-unused-code` | Warns about unused private methods/fields, unused imports, unused public members with zero callers |
 | `check-compile` | Basic syntax checks (braces, namespace, type declaration) |
 | `warn-serialization` | Warns if `[SerializeField]` renamed without `[FormerlySerializedAs]` |
 | `warn-filename` | Warns if C# filename doesn't match class name (breaks MonoBehaviour) |

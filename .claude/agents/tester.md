@@ -114,6 +114,47 @@ namespace GameName.Tests.Integration
 - Event ordering is correct
 - Unsubscribed handlers don't fire
 
+### 6. Input-Driven System Tests
+Systems that receive input are **input-agnostic by design** — they expose methods like `SetMoveInput(Vector2)`, `Jump()`, etc. and never reference `InputAction` or `PlayerControls`. This means they are directly testable without any input mocking:
+
+```csharp
+[Test]
+public void SetMoveInput_WithRightVector_UpdatesVelocity()
+{
+    var model = new PlayerModel();
+    var sut = new PlayerMovementSystem(model);
+
+    sut.SetMoveInput(Vector2.right);
+    sut.Tick(1f);
+
+    Assert.That(model.Velocity.Value.x, Is.GreaterThan(0f));
+}
+
+[Test]
+public void Jump_WhenGrounded_SetsJumpState()
+{
+    var model = new PlayerModel { IsGrounded = true };
+    var sut = new PlayerMovementSystem(model);
+
+    sut.Jump();
+
+    Assert.That(model.IsJumping, Is.True);
+}
+
+[Test]
+public void Jump_WhenAirborne_DoesNothing()
+{
+    var model = new PlayerModel { IsGrounded = false };
+    var sut = new PlayerMovementSystem(model);
+
+    sut.Jump();
+
+    Assert.That(model.IsJumping, Is.False);
+}
+```
+
+**Key principle**: If you find yourself needing to mock `InputAction` or simulate button presses in a unit test, the architecture is wrong — the System should not depend on Input types. Flag this as a blocker.
+
 ## Mocking Strategy
 - **Hand-rolled fakes**: Create simple implementations of interfaces for testing. NO mocking frameworks (Moq, NSubstitute, etc.)
 - **Test doubles**: Fakes (working implementations), Stubs (canned answers), Spies (record calls)

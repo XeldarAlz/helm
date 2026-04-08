@@ -5,9 +5,9 @@
 When renaming ANY serialized field, you MUST add `[FormerlySerializedAs]`:
 
 ```csharp
-// Renaming m_Speed to m_MoveSpeed:
-[FormerlySerializedAs("m_Speed")]
-[SerializeField] private float m_MoveSpeed;
+// Renaming _speed to _moveSpeed:
+[FormerlySerializedAs("_speed")]
+[SerializeField] private float _moveSpeed;
 ```
 
 **Why:** Without this, Unity cannot map the old serialized data to the new field name. Every configured value in every scene, prefab, and ScriptableObject silently resets to default. Hours of artist/designer work lost with zero warning.
@@ -33,10 +33,10 @@ The `[FormerlySerializedAs]` attribute stays forever. Never remove it.
 
 ```csharp
 // GOOD — private with explicit serialization
-[SerializeField] private float m_Health = 100f;
+[SerializeField] private float _health = 100f;
 
 // BAD — public exposes to inspector AND code
-public float health = 100f;
+public float health = 100f;  // (note: if public is needed, use lowerCamelCase)
 
 // For auto-properties (C# 7.3+):
 [field: SerializeField] public float Health { get; private set; }
@@ -49,11 +49,11 @@ public float health = 100f;
 
 ```csharp
 // CORRECT — Unity overrides == to detect destroyed objects
-if (m_Target == null) return;
+if (_target == null) return;
 
 // WRONG — bypasses Unity's destroyed-object detection
-if (m_Target is null) return;      // C# null check, misses destroyed
-if (m_Target?.Method() != null)    // ?. bypasses Unity's ==, calls method on destroyed object
+if (_target is null) return;      // C# null check, misses destroyed
+if (_target?.Method() != null)    // ?. bypasses Unity's ==, calls method on destroyed object
 ```
 
 Unity objects can be "destroyed" but not garbage collected. `== null` returns true for destroyed objects. `?.` and `is null` use C# reference equality, which returns false — leading to calls on destroyed objects.
@@ -62,7 +62,7 @@ Unity objects can be "destroyed" but not garbage collected. `== null` returns tr
 
 ```csharp
 // For interface/abstract fields:
-[SerializeReference] private IAbility m_Ability;
+[SerializeReference] private IAbility _ability;
 ```
 
 Without `[SerializeReference]`, Unity serializes by value and loses type information.
@@ -73,28 +73,28 @@ Without `[SerializeReference]`, Unity serializes by value and loses type informa
 // Dictionary serialization via callback:
 public class MyData : MonoBehaviour, ISerializationCallbackReceiver
 {
-    [SerializeField] private List<string> m_Keys = new();
-    [SerializeField] private List<int> m_Values = new();
+    [SerializeField] private List<string> _keys = new();
+    [SerializeField] private List<int> _values = new();
 
-    private Dictionary<string, int> m_Lookup = new();
+    private Dictionary<string, int> _lookup = new();
 
     public void OnBeforeSerialize()
     {
-        m_Keys.Clear();
-        m_Values.Clear();
-        foreach (KeyValuePair<string, int> pair in m_Lookup)
+        _keys.Clear();
+        _values.Clear();
+        foreach (KeyValuePair<string, int> pair in _lookup)
         {
-            m_Keys.Add(pair.Key);
-            m_Values.Add(pair.Value);
+            _keys.Add(pair.Key);
+            _values.Add(pair.Value);
         }
     }
 
     public void OnAfterDeserialize()
     {
-        m_Lookup.Clear();
-        for (int i = 0; i < m_Keys.Count; i++)
+        _lookup.Clear();
+        for (int i = 0; i < _keys.Count; i++)
         {
-            m_Lookup[m_Keys[i]] = m_Values[i];
+            _lookup[_keys[i]] = _values[i];
         }
     }
 }
