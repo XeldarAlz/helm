@@ -74,25 +74,32 @@ Most AI coding tools generate code. Helm generates **entire projects** with enfo
 
 The pipeline works with just Claude Code CLI — no GUI needed.
 
-### Option 1: Copy to existing project
+### Option 1: Installer script (recommended)
 
 ```bash
-# Copy the pipeline config into your Unity project
-git clone https://github.com/XeldarAlz/helm.git /tmp/helm
-cp -r /tmp/helm/.claude/ /path/to/your/unity/project/.claude/
+# Latest published pipeline release — no git or GUI files downloaded
+curl -fsSL https://raw.githubusercontent.com/XeldarAlz/helm/main/scripts/install-pipeline.sh | bash -s /path/to/your/unity/project
 
-# Navigate to your Unity project and start Claude Code
-cd /path/to/your/unity/project
-claude
+# Pin to a specific version for reproducible installs
+curl -fsSL https://raw.githubusercontent.com/XeldarAlz/helm/main/scripts/install-pipeline.sh | bash -s -- --tag v0.1.0 /path/to/your/unity/project
 
-# Run the full pipeline
-> /build-game
+# Track main directly (sparse-clones only .claude/, no Tauri/GUI code)
+curl -fsSL https://raw.githubusercontent.com/XeldarAlz/helm/main/scripts/install-pipeline.sh | bash -s -- --from-source /path/to/your/unity/project
 ```
 
-### Option 2: Installer script
+The installer fetches a versioned `.claude/` tarball (~1 MB) with sha256 verification. None of the GUI/Tauri code is downloaded.
+
+### Option 2: Manual copy
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/XeldarAlz/helm/main/scripts/install-pipeline.sh | bash -s /path/to/your/unity/project
+# Sparse-clone just .claude/ into a temp dir
+git clone --depth 1 --filter=blob:none --sparse https://github.com/XeldarAlz/helm.git /tmp/helm
+git -C /tmp/helm sparse-checkout set .claude
+cp -r /tmp/helm/.claude /path/to/your/unity/project/.claude
+
+cd /path/to/your/unity/project
+claude
+> /build-game
 ```
 
 ### Option 3: Step by step

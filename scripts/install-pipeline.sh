@@ -4,11 +4,18 @@ set -euo pipefail
 # Helm Pipeline Installer
 # Copies the Claude Code pipeline config (.claude/) into a target directory.
 #
+# Default path: downloads the latest published pipeline tarball (no git, no GUI).
+# Fallback: sparse git clone of `.claude/` from main if the release is unavailable.
+#
 # Usage:
 #   ./install-pipeline.sh /path/to/unity/project
+#   ./install-pipeline.sh --tag v0.1.0 /path/to/unity/project
+#   ./install-pipeline.sh --from-source /path/to/unity/project
 #   curl -fsSL https://raw.githubusercontent.com/XeldarAlz/helm/main/scripts/install-pipeline.sh | bash -s /path/to/unity/project
 
-REPO_URL="https://github.com/XeldarAlz/helm.git"
+REPO_SLUG="XeldarAlz/helm"
+REPO_URL="https://github.com/${REPO_SLUG}.git"
+RELEASE_BASE="https://github.com/${REPO_SLUG}/releases/download"
 BRANCH="main"
 
 # --- Colors ---
@@ -23,28 +30,78 @@ ok()    { echo -e "${GREEN}[helm]${NC} $1"; }
 warn()  { echo -e "${YELLOW}[helm]${NC} $1"; }
 fail()  { echo -e "${RED}[helm]${NC} $1" >&2; exit 1; }
 
+usage() {
+    cat <<EOF
+Usage: install-pipeline.sh [options] /path/to/unity/project
+
+Options:
+  --tag <version>    Install a specific pipeline release (e.g. v0.1.0).
+  --from-source      Skip release tarball; sparse-clone .claude/ from main.
+  -h, --help         Show this help.
+
+Default: fetches the latest pipeline release tarball, falls back to sparse-checkout.
+EOF
+}
+
 # --- Parse arguments ---
-TARGET_DIR="${1:-}"
+TARGET_DIR=""
+PINNED_VERSION=""
+FROM_SOURCE=0
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --tag)
+            [ $# -ge 2 ] || fail "--tag requires a version argument"
+            PINNED_VERSION="${2#v}"
+            shift 2
+            ;;
+        --tag=*)
+            PINNED_VERSION="${1#--tag=}"
+            PINNED_VERSION="${PINNED_VERSION#v}"
+            shift
+            ;;
+        --from-source)
+            FROM_SOURCE=1
+            shift
+            ;;
+        -h|--help)
+            usage; exit 0
+            ;;
+        --)
+            shift
+            ;;
+        -*)
+            fail "Unknown option: $1 (try --help)"
+            ;;
+        *)
+            if [ -z "$TARGET_DIR" ]; then
+                TARGET_DIR="$1"
+            else
+                fail "Unexpected argument: $1"
+            fi
+            shift
+            ;;
+    esac
+done
 
 if [ -z "$TARGET_DIR" ]; then
-    fail "Usage: install-pipeline.sh /path/to/unity/project"
+    usage >&2
+    exit 1
 fi
 
 TARGET_DIR="$(cd "$TARGET_DIR" 2>/dev/null && pwd)" || fail "Directory does not exist: $1"
 
-# --- Check prerequisites ---
+# --- Prerequisites (curl is always required; git only for source fallback) ---
 info "Checking prerequisites..."
-
-if ! command -v git &>/dev/null; then
-    fail "git is not installed. Install it first."
-fi
+command -v curl &>/dev/null || fail "curl is not installed. Install it first."
+command -v tar  &>/dev/null || fail "tar is not installed. Install it first."
 
 if ! command -v claude &>/dev/null; then
     warn "Claude Code CLI not found. Install it: https://docs.anthropic.com/en/docs/claude-code"
     warn "The pipeline will be installed but won't run without Claude Code."
 fi
 
-# --- Check if .claude/ already exists ---
+# --- Confirm overwrite if .claude/ already exists ---
 if [ -d "$TARGET_DIR/.claude" ]; then
     warn ".claude/ already exists in $TARGET_DIR"
     read -p "Overwrite? [y/N] " -n 1 -r
@@ -56,15 +113,76 @@ if [ -d "$TARGET_DIR/.claude" ]; then
     rm -rf "$TARGET_DIR/.claude"
 fi
 
-# --- Clone and copy ---
+# --- Working dir ---
 TEMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TEMP_DIR"' EXIT
 
-info "Downloading Helm pipeline..."
-git clone --depth 1 --branch "$BRANCH" "$REPO_URL" "$TEMP_DIR/helm" 2>/dev/null
+# --- Install paths ---
+verify_sha256() {
+    local archive="$1" digest_file="$2"
+    if command -v shasum &>/dev/null; then
+        ( cd "$(dirname "$archive")" && shasum -a 256 -c "$(basename "$digest_file")" >/dev/null 2>&1 )
+    elif command -v sha256sum &>/dev/null; then
+        ( cd "$(dirname "$archive")" && sha256sum -c "$(basename "$digest_file")" >/dev/null 2>&1 )
+    else
+        warn "No sha256 tool available; skipping checksum verification."
+        return 0
+    fi
+}
 
-info "Installing pipeline to $TARGET_DIR/.claude/"
-cp -r "$TEMP_DIR/helm/.claude" "$TARGET_DIR/.claude"
+install_from_tarball() {
+    local url="$1" sha_url="$2"
+    info "Fetching $url"
+    if ! curl -fsSL --retry 2 -o "$TEMP_DIR/helm-pipeline.tar.gz" "$url"; then
+        return 1
+    fi
+
+    if curl -fsSL --retry 2 -o "$TEMP_DIR/helm-pipeline.tar.gz.sha256" "$sha_url" 2>/dev/null; then
+        if ! verify_sha256 "$TEMP_DIR/helm-pipeline.tar.gz" "$TEMP_DIR/helm-pipeline.tar.gz.sha256"; then
+            fail "Checksum verification failed for $url"
+        fi
+        info "Checksum verified."
+    else
+        warn "No checksum file at $sha_url — skipping verification."
+    fi
+
+    mkdir -p "$TEMP_DIR/extract"
+    tar -xzf "$TEMP_DIR/helm-pipeline.tar.gz" -C "$TEMP_DIR/extract"
+    [ -d "$TEMP_DIR/extract/.claude" ] || fail "Tarball does not contain .claude/"
+    cp -r "$TEMP_DIR/extract/.claude" "$TARGET_DIR/.claude"
+    return 0
+}
+
+install_from_source() {
+    command -v git &>/dev/null || fail "git is not installed. Install git or use a published --tag."
+    info "Sparse-cloning $REPO_URL (.claude/ only)..."
+    git clone --depth 1 --filter=blob:none --sparse --branch "$BRANCH" "$REPO_URL" "$TEMP_DIR/helm" >/dev/null 2>&1
+    git -C "$TEMP_DIR/helm" sparse-checkout set .claude >/dev/null
+    [ -d "$TEMP_DIR/helm/.claude" ] || fail "Sparse checkout did not produce .claude/"
+    cp -r "$TEMP_DIR/helm/.claude" "$TARGET_DIR/.claude"
+}
+
+# --- Resolve install strategy ---
+if [ -n "$PINNED_VERSION" ]; then
+    TAG="pipeline-v${PINNED_VERSION}"
+    TARBALL_URL="${RELEASE_BASE}/${TAG}/helm-pipeline-${PINNED_VERSION}.tar.gz"
+    SHA_URL="${TARBALL_URL}.sha256"
+else
+    TARBALL_URL="${RELEASE_BASE}/pipeline-latest/helm-pipeline.tar.gz"
+    SHA_URL="${TARBALL_URL}.sha256"
+fi
+
+if [ "$FROM_SOURCE" -eq 1 ]; then
+    install_from_source
+elif install_from_tarball "$TARBALL_URL" "$SHA_URL"; then
+    :
+else
+    if [ -n "$PINNED_VERSION" ]; then
+        fail "Could not download pinned release $TAG from $TARBALL_URL"
+    fi
+    warn "Release tarball unavailable; falling back to git sparse-checkout."
+    install_from_source
+fi
 
 # --- Verify ---
 SKILL_COUNT=$(find "$TARGET_DIR/.claude/skills" -name "SKILL.md" 2>/dev/null | wc -l | tr -d ' ')

@@ -1,0 +1,81 @@
+name: Publish pipeline tarball
+
+on:
+  push:
+    tags: ['pipeline-v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (e.g. 0.1.0). Used only when run manually.'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: ver
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/pipeline-v}"
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Build versioned tarball
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          ARCHIVE="helm-pipeline-${VERSION}.tar.gz"
+          tar --exclude='.claude/.DS_Store' \
+              --exclude='.claude/mailbox' \
+              --exclude='.claude/heartbeat' \
+              --exclude='.claude/checkpoint' \
+              -czf "${ARCHIVE}" .claude/
+          shasum -a 256 "${ARCHIVE}" > "${ARCHIVE}.sha256"
+          echo "ARCHIVE=${ARCHIVE}" >> "$GITHUB_ENV"
+
+      - name: Build latest-aliased tarball
+        run: |
+          cp "${ARCHIVE}" helm-pipeline.tar.gz
+          shasum -a 256 helm-pipeline.tar.gz > helm-pipeline.tar.gz.sha256
+
+      - name: Publish versioned release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          TAG="pipeline-v${VERSION}"
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" \
+              --title "Pipeline v${VERSION}" \
+              --notes "Helm Claude Code pipeline (\`.claude/\`) — version ${VERSION}.
+
+Install:
+\`\`\`
+curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/main/scripts/install-pipeline.sh | bash -s -- --tag v${VERSION} /path/to/unity/project
+\`\`\`"
+          fi
+          gh release upload "$TAG" "${ARCHIVE}" "${ARCHIVE}.sha256" --clobber
+
+      - name: Update floating pipeline-latest release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          gh release delete pipeline-latest --yes --cleanup-tag 2>/dev/null || true
+          gh release create pipeline-latest \
+            --target "$GITHUB_SHA" \
+            --title "Pipeline (latest)" \
+            --notes "Floating pointer to the most recent pipeline release. Currently **v${VERSION}**.
+
+Stable URLs (overwritten on each pipeline release):
+- \`https://github.com/${{ github.repository }}/releases/download/pipeline-latest/helm-pipeline.tar.gz\`
+- \`https://github.com/${{ github.repository }}/releases/download/pipeline-latest/helm-pipeline.tar.gz.sha256\`" \
+            helm-pipeline.tar.gz helm-pipeline.tar.gz.sha256
