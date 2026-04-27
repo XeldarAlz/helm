@@ -132,13 +132,17 @@ verify_sha256() {
 
 install_from_tarball() {
     local url="$1" sha_url="$2"
+    # Save under the original basename so the published .sha256 (which lists
+    # the archive's original filename) verifies cleanly via `shasum -c`.
+    local archive_name; archive_name="$(basename "$url")"
+    local archive_path="$TEMP_DIR/$archive_name"
     info "Fetching $url"
-    if ! curl -fsSL --retry 2 -o "$TEMP_DIR/helm-pipeline.tar.gz" "$url"; then
+    if ! curl -fsSL --retry 2 -o "$archive_path" "$url"; then
         return 1
     fi
 
-    if curl -fsSL --retry 2 -o "$TEMP_DIR/helm-pipeline.tar.gz.sha256" "$sha_url" 2>/dev/null; then
-        if ! verify_sha256 "$TEMP_DIR/helm-pipeline.tar.gz" "$TEMP_DIR/helm-pipeline.tar.gz.sha256"; then
+    if curl -fsSL --retry 2 -o "${archive_path}.sha256" "$sha_url" 2>/dev/null; then
+        if ! verify_sha256 "$archive_path" "${archive_path}.sha256"; then
             fail "Checksum verification failed for $url"
         fi
         info "Checksum verified."
@@ -147,7 +151,7 @@ install_from_tarball() {
     fi
 
     mkdir -p "$TEMP_DIR/extract"
-    tar -xzf "$TEMP_DIR/helm-pipeline.tar.gz" -C "$TEMP_DIR/extract"
+    tar -xzf "$archive_path" -C "$TEMP_DIR/extract"
     [ -d "$TEMP_DIR/extract/.claude" ] || fail "Tarball does not contain .claude/"
     cp -r "$TEMP_DIR/extract/.claude" "$TARGET_DIR/.claude"
     return 0
