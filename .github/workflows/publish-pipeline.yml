@@ -50,17 +50,22 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.ver.outputs.version }}
+          REPO: ${{ github.repository }}
         run: |
           TAG="pipeline-v${VERSION}"
+          NOTES_FILE="$(mktemp)"
+          cat > "$NOTES_FILE" <<EOF
+          Helm Claude Code pipeline (\`.claude/\`) — version ${VERSION}.
+
+          Install:
+          \`\`\`
+          curl -fsSL https://raw.githubusercontent.com/${REPO}/main/scripts/install-pipeline.sh | bash -s -- --tag v${VERSION} /path/to/unity/project
+          \`\`\`
+          EOF
           if ! gh release view "$TAG" >/dev/null 2>&1; then
             gh release create "$TAG" \
               --title "Pipeline v${VERSION}" \
-              --notes "Helm Claude Code pipeline (\`.claude/\`) — version ${VERSION}.
-
-Install:
-\`\`\`
-curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/main/scripts/install-pipeline.sh | bash -s -- --tag v${VERSION} /path/to/unity/project
-\`\`\`"
+              --notes-file "$NOTES_FILE"
           fi
           gh release upload "$TAG" "${ARCHIVE}" "${ARCHIVE}.sha256" --clobber
 
@@ -68,14 +73,19 @@ curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/main/scrip
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.ver.outputs.version }}
+          REPO: ${{ github.repository }}
         run: |
+          NOTES_FILE="$(mktemp)"
+          cat > "$NOTES_FILE" <<EOF
+          Floating pointer to the most recent pipeline release. Currently **v${VERSION}**.
+
+          Stable URLs (overwritten on each pipeline release):
+          - https://github.com/${REPO}/releases/download/pipeline-latest/helm-pipeline.tar.gz
+          - https://github.com/${REPO}/releases/download/pipeline-latest/helm-pipeline.tar.gz.sha256
+          EOF
           gh release delete pipeline-latest --yes --cleanup-tag 2>/dev/null || true
           gh release create pipeline-latest \
             --target "$GITHUB_SHA" \
             --title "Pipeline (latest)" \
-            --notes "Floating pointer to the most recent pipeline release. Currently **v${VERSION}**.
-
-Stable URLs (overwritten on each pipeline release):
-- \`https://github.com/${{ github.repository }}/releases/download/pipeline-latest/helm-pipeline.tar.gz\`
-- \`https://github.com/${{ github.repository }}/releases/download/pipeline-latest/helm-pipeline.tar.gz.sha256\`" \
+            --notes-file "$NOTES_FILE" \
             helm-pipeline.tar.gz helm-pipeline.tar.gz.sha256
